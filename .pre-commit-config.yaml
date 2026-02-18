@@ -1,0 +1,58 @@
+---
+default_language_version:
+    python: python3.12
+default_stages: [pre-commit, pre-push]
+repos:
+    - repo: https://github.com/pre-commit/pre-commit-hooks
+      rev: v4.6.0
+      hooks:
+          - id: check-added-large-files # Prevent giant files from being committed
+            args: [--maxkb=5000]
+          - id: check-json # Attempts to load all json files to verify syntax
+            exclude: ^.vscode
+          - id: check-merge-conflict # Check for files that contain merge conflict strings
+          - id: check-toml # Attempts to load all TOML files to verify syntax
+          - id: detect-private-key # Checks for the existence of private keys
+            exclude: .env
+          - id: pretty-format-json # Checks that all your JSON files are pretty. "Pretty" here means that keys are sorted and indented. You can configure this with the following commandline options
+            args: [--autofix]
+            exclude: ^.vscode|notebooks
+    - repo: https://github.com/jumanjihouse/pre-commit-hook-yamlfmt
+      rev: 0.2.3
+      hooks:
+          - id: yamlfmt
+    - repo: https://github.com/MarcoGorelli/polars-upgrade
+      rev: 0.3.2 # polars-upgrade version goes here
+      hooks:
+          - id: polars-upgrade
+            args: [--target-version=0.20.15] # Polars version goes here
+    - repo: https://github.com/astral-sh/ruff-pre-commit
+    # Ruff version.
+      rev: v0.15.0
+      hooks:
+      # Run the linter.
+          - id: ruff
+            args: [--fix]
+      # Run the formatter.
+          - id: ruff-format
+    - repo: local
+      hooks:
+          - id: uv-check
+            name: uv check
+            entry: uv check
+            language: system
+            types: [python]
+            pass_filenames: false
+          - id: uv-sync-check
+            name: uv sync check
+            entry: uv sync --check
+            language: system
+            types: [python]
+            pass_filenames: false
+          - id: deptry
+            name: deptry
+            description: deptry is a command line tool to check for issues with dependencies in a Python project, such as unused or missing dependencies.
+            entry: uv run deptry .
+            language: system
+            always_run: true
+            pass_filenames: false

@@ -1,0 +1,5 @@
+# Global uv settings
+compile-bytecode = true
+link-mode = "copy"
+cache-dir = ".uv-cache"
+index-strategy = "first-index"

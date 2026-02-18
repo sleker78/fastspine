@@ -1,0 +1,114 @@
+line-length = 120
+output-format = "grouped"
+# Assume Python 3.12
+target-version = "py312"
+
+# A list of file patterns to include when linting.
+include = ["**/pyproject.toml", "*.ipynb", "*.py", "*.pyi"]
+
+# Rules: https://beta.ruff.rs/docs/rules/
+# Enable Pyflakes `E` and `F` codes by default.
+lint.select = [
+  #default
+  "E", # pycodestyle error
+  "F", # flake8 error
+  #extra
+  "A", # bultin shadowing
+  "B", # flake8 bugbear
+  "BLE", # aboid bare excepts
+  "C4", # simplify comprehensions
+  "D", # docstyle
+  "DTZ", # datetime errors
+  "FBT", # avoid boolean trap
+  "G", # logging format
+  "I", # flake8-isort import
+  "N", # pep8 naming
+  "RET", # return statements values
+  "S", # bandit
+  "YTT", # wrong usage of sys.info
+  "B", # flake8-bugbear
+]
+
+lint.ignore = [
+  "B008", # do not perform function calls in argument defaults
+  "BLE001", #Do not catch blind exception: {name}
+  "C901", # too complex
+  "D107", # Missing docstring in __init__
+  "D203", # 1 blank line required before class docstring
+  "D213", # Multi-line docstring summary should start at the second line
+  "D417", # Missing argument description in the docstring for {definition}: {name}
+  "D100",
+  "FBT001", # Booleans as positional arguments
+  "FBT002", # Booleans as positional arguments
+  "B005", # Strip with multi characters
+  "N805", # First argument of a method should be self
+  "S608", # SQL injections
+  "B007", # Loop control variable
+  "B023", # Need to be checked
+  "E501", # Handled by Ruff formatter
+  "W191", # Handled by Ruff formatter
+  "E111", # Handled by Ruff formatter
+  "E114", # Handled by Ruff formatter
+  "E117", # Handled by Ruff formatter
+  "D206", # Handled by Ruff formatter
+  "D300", # Handled by Ruff formatter
+  "Q000", # Handled by Ruff formatter
+  "Q001", # Handled by Ruff formatter
+  "Q002", # Handled by Ruff formatter
+  "Q003", # Handled by Ruff formatter
+  "COM812", # Handled by Ruff formatter
+  "COM819", # Handled by Ruff formatter
+  "ISC001", # Handled by Ruff formatter
+  "ISC002", # Handled by Ruff formatter
+]
+
+# Always autofix, but never try to fix `F401` (unused imports).
+fix = true
+lint.unfixable = ["F401"]
+# Allow unused variables when underscore-prefixed.
+lint.dummy-variable-rgx = ">=(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+# Exclude a variety of commonly ignored directories (you can have some problems)
+exclude = [
+  "docs",
+  ".direnv",
+  ".eggs",
+  ".git",
+  ".hg",
+  ".mypy_cache",
+  ".nox",
+  ".pants.d",
+  ".ruff_cache",
+  ".svn",
+  ".tox",
+  ".venv",
+  "__pypackages__",
+  "_build",
+  "buck-out",
+  "build",
+  "dist",
+  "node_modules",
+  "venv",
+  ".venv",
+  "notebooks",
+  ".env",
+  "alembic"
+]
+
+[lint.mccabe]
+# Unlike Flake8, default to a complexity level of 10.
+max-complexity = 10
+
+[lint.flake8-quotes]
+docstring-quotes = "double"
+
+[lint.pydocstyle]
+convention = "google"
+
+[lint.per-file-ignores]
+"__init__.py" = ["D104", "F401", "I002"]
+"test*.py" = ["S101", "T201"]
+
+[format]
+docstring-code-format = true
+indent-style = "space"
+quote-style = "double"

@@ -1,0 +1,61 @@
+[project]
+name = "FastStack"
+version = "0.1.0"
+description = ""
+authors = [
+    {name = "Aleksandar Pavlovic", email = "pavlovic@mdpi.com"}
+]
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "celery>=5.3.1,<6",
+    "fastapi>=0.100.0,<1",
+    "httpx>=0.28.1",
+    "pydantic>=2",
+    "pydantic-settings>=2.3.4",
+    "python-dateutil>=2.9.0,<3",
+    "pytest>=8.3.3",
+    "redis>=5.0.7",
+    "sqlalchemy<2",
+    "starlette>=0.40.0,<0.47.0",
+    "rich>=14.0.0",
+    "pandas>=2.1.3",
+    "polars>=0.20.13",
+    "fastapi-mail>=1.5.0",
+    "openpyxl>=3.1.5",
+]
+
+[dependency-groups]
+dev = [
+    "deptry>=0.16.2",
+    "matplotlib>=3.8.0",
+    "mypy>=1.8.0",
+    "pre-commit>=3.3.3",
+    "psycopg2-binary>=2.9.10",
+    "py-heat-magic>=0.0.2",
+    "pylint>=2.17.4",
+    "pytest-asyncio>=0.23.7",
+    "pytest-cov>=6.0.0",
+    "ruff>=0.5.1",
+    "seaborn>=0.12.2",
+    "tqdm>=4.66.6",
+    "yappi>=1.6.10",
+    "types-python-dateutil",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.deptry]
+exclude = ["docs", ".venv", "venv", "node_modules", "__pycache__", ".git"]
+
+[tool.deptry.per_rule_ignores]
+DEP002 = ["openpyxl"]
+DEP003 = ["httpx", "ecs_logging", "termcolor", "psutil"]
+
+[tool.mypy]
+ignore_missing_imports = true
+follow_imports = "skip"
+# disable_error_code = ["import", "attr-defined", "name-defined", "misc", "no-untyped-def", "no-untyped-call", "var-annotated", "arg-type", "assignment", "return-value", "call-overload", "union-attr", "operator", "index", "type-arg", "valid-type", "func-returns-value", "return", "abstract", "override", "annotation-unchecked", "dict-item", "call-arg", "list-item", "has-type","type-var"]
+enable_error_code = ["unused-awaitable"]
