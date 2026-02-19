@@ -25,7 +25,11 @@ class DummyMissingAnn:
     def __init__(self, a, b: str):
         pass
 
+class DummyMissingParam:
+    """Dummy class with a missing annotation for testing."""
 
+    def __init__(self, b: str):
+        pass
 class Model(BaseModel):
     """Pydantic model for testing mapping."""
 
@@ -34,23 +38,23 @@ class Model(BaseModel):
 
 
 def test_get_annotations_basic():
-    """Test getting annotations from a class instance."""
-    anns = get_annotations(Dummy(1, "x"))
+    """Test getting annotations from a class type."""
+    anns = get_annotations(Dummy)
     assert anns == {"a": int, "b": str}
 
 
 def test_get_annotations_missing_annotation():
     """Test that an error is raised when a parameter is missing an annotation."""
     with pytest.raises(ValueError):
-        get_annotations(DummyMissingAnn(1, "x"))
+        get_annotations(DummyMissingAnn)
 
 
 def test_get_annotations_mandatory_params():
     """Test getting annotations with mandatory parameters."""
-    anns = get_annotations(Dummy(1, "x"), mandatory_params=["a"])
+    anns = get_annotations(Dummy, mandatory_params=["a"])
     assert "a" in anns
     with pytest.raises(ValueError):
-        get_annotations(Dummy(1, "x"), mandatory_params=["x"])
+        get_annotations(DummyMissingParam, mandatory_params=["nonexistent"])
 
 
 def test_get_annotations_invalid_input():

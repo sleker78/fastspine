@@ -6,6 +6,7 @@ import re
 import time
 import uuid
 from contextvars import ContextVar
+from inspect import iscoroutinefunction
 from pathlib import Path
 from typing import Any, AsyncGenerator, Dict, Generator, Optional
 
@@ -299,7 +300,7 @@ def with_context(context: Dict[str, Any]):
     """
 
     def decorator(func):
-        if contextlib.iscoroutinefunction(func):
+        if iscoroutinefunction(func):
 
             async def async_wrapper(*args, **kwargs):
                 async with acontextualize(**context):

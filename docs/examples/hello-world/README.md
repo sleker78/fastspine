@@ -4,15 +4,15 @@ The simplest possible FastStack application demonstrating core concepts.
 
 ## What This Example Shows
 
-✅ **Basic FastStack setup** with minimal configuration
-✅ **Database session registration** and automatic dependency injection
-✅ **Repository pattern** with BaseRepository
-✅ **Automatic table creation** on startup
-✅ **Type-safe endpoints** with Pydantic models
+✅ **Basic FastStack setup** with settings-based configuration
+✅ **Service-Repository pattern** with automatic dependency injection
+✅ **Repository pattern** with BaseRepository (no manual __init__)
+✅ **Business logic separation** in service layer
+✅ **Type-safe endpoints** with modern Pydantic models
 
 ## Prerequisites
 
-- Python 3.10+
+- Python 3.12+
 - PostgreSQL database
 - Basic understanding of FastAPI
 
@@ -102,17 +102,28 @@ Response:
 
 ## Code Walkthrough
 
-### 1. Database Configuration
+### 1. Settings-Based Configuration
 
 ```python
-db_config = DBConfig(
-    host="localhost",
-    port=5432,
-    dbname="faststack_hello",
-    user="postgres",
-    password="password",
-    service="postgres"  # Uses psycopg2 driver
-)
+class Settings(BaseSettings):
+    DB_HOST: str = "localhost"
+    DB_PORT: int = 5432
+    DB_NAME: str = "faststack_hello"
+    DB_USER: str = "postgres"
+    DB_PASSWORD: str = "password"
+
+    @property
+    def db_config(self) -> DBConfig:
+        return DBConfig(
+            host=self.DB_HOST,
+            port=self.DB_PORT,
+            dbname=self.DB_NAME,
+            user=self.DB_USER,
+            password=self.DB_PASSWORD,
+            service="postgres"
+        )
+
+settings = Settings()
 ```
 
 ### 2. SQLAlchemy Model
@@ -123,46 +134,62 @@ class Greeting(SQLBaseModel):
 
     id = Column(Integer, primary_key=True)
     message = Column(String(255), nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=now)  # Using FastStack utility
 ```
 
-### 3. Repository with Business Logic
+### 3. Repository with Automatic Injection
 
 ```python
 class GreetingRepository(BaseRepository[Greeting]):
-    def __init__(self, db: Session, profiler: Profiler):
-        super().__init__(db, profiler)
+    # No __init__ needed! BaseRepository handles session injection automatically
 
     def create_greeting(self, message: str) -> Greeting:
         greeting = Greeting(message=message)
         return self.create(greeting, commit=True)
 ```
 
-### 4. Automatic Dependency Injection
+### 4. Service Layer with Business Logic
 
 ```python
+# Repository Manager for dependency injection
+class LocalRepositoryManager(RepositoryManager[Session]):
+    pass
+
+class GreetingService(BaseService):
+    def __init__(self, rm: LocalRepositoryManager = repository_manager_dep(LocalRepositoryManager)):
+        super().__init__()
+        self.rm = rm
+
+    async def create_greeting(self, message: str) -> Greeting:
+        # Business logic - validation, transformation, etc.
+        if not message.strip():
+            raise ValueError("Message cannot be empty")
+
+        repo = self.rm.get(GreetingRepository)
+        return repo.create_greeting(message.strip())
+
 @app.post("/greetings", response_model=GreetingResponse)
 async def create_greeting(
     message: str,
-    greeting_repo: GreetingRepository = repository_dep(GreetingRepository)
+    service: GreetingService = service_dep(GreetingService)
     # ↑ FastStack automatically:
     # 1. Creates database session
-    # 2. Injects profiler
-    # 3. Instantiates repository
+    # 2. Injects repository manager
+    # 3. Instantiates service
     # 4. Manages session lifecycle
 ):
-    greeting = greeting_repo.create_greeting(message)
-    return GreetingResponse.from_orm(greeting)
+    greeting = await service.create_greeting(message)
+    return GreetingResponse.model_validate(greeting)
 ```
 
 ### 5. App Initialization
 
 ```python
 # Register database session type
-register_session(Session, db_config)
+register_session(Session, settings.db_config)
 
-# Create FastStack app with all middleware
-app = run_fast_core_app()
+# Create FastStack app with settings
+app = run_fast_core_app(settings)
 ```
 
 ## Key FastStack Concepts Demonstrated
@@ -199,10 +226,10 @@ Visit `http://localhost:8000/docs` for interactive API documentation.
 From this basic example, you can:
 
 1. **Add more models** and repositories
-2. **Implement service layer** for business logic
+2. **Expand service layer** with advanced business logic
 3. **Add caching** with decorators
 4. **Enable background tasks** with Celery
-5. **Explore [Basic Blog Example](../basic-blog/)** for more complex patterns
+5. **Explore [Basic Blog Example](../basic-blog/)** for multi-database patterns
 
 ## Troubleshooting
 

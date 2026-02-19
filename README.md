@@ -36,24 +36,33 @@ uv sync --extra dev
 
 ### Database Made Simple
 ```python
-from faststack import BaseRepository, repository_dep
+from faststack import BaseRepository, BaseService, service_dep
 
 class UserRepository(BaseRepository[User]):
+    # No __init__ needed - automatic session injection!
     async def find_by_email(self, email: str) -> User | None:
         return await self.find_one_by(User.email == email)
 
-# Automatic dependency injection
+class UserService(BaseService):
+    async def get_user_by_id(self, user_id: int) -> User | None:
+        repo = self.rm.get(UserRepository)  # Repository manager injection
+        return await repo.find_by_id(user_id)
+
+# Clean endpoint with service layer
 @app.get("/users/{user_id}")
-async def get_user(user_id: int, repo: UserRepository = repository_dep()):
-    return await repo.find_by_id(user_id)
+async def get_user(user_id: int, service: UserService = service_dep(UserService)):
+    return await service.get_user_by_id(user_id)
 ```
 
 ### Models with Smart Mixins
 ```python
+from sqlalchemy import Column, String
 from faststack.models.base import Base
 from faststack.mixins import CreatedAtMixin, SoftDeleteMixin
 
 class User(Base, CreatedAtMixin, SoftDeleteMixin):
+    __tablename__ = "users"
+
     name = Column(String(100))
     email = Column(String(255), unique=True)
     # created_at, updated_at, deleted_at automatically added!
@@ -65,13 +74,17 @@ from faststack import BaseService, service_dep
 
 class UserService(BaseService):
     async def create_user(self, data: UserCreateSchema) -> User:
-        # Business logic here - validation, transformation, etc.
-        return await self.repo.create(data.dict())
+        # Business logic - validation, transformation, etc.
+        if not data.email.strip():
+            raise ValueError("Email is required")
+
+        repo = self.rm.get(UserRepository)
+        return await repo.create(data.model_dump(), commit=True)
 
 @app.post("/users")
 async def create_user(
     data: UserCreateSchema,
-    service: UserService = service_dep()
+    service: UserService = service_dep(UserService)
 ):
     return await service.create_user(data)
 ```

@@ -66,11 +66,12 @@ class BaseTask(Task):
         SessionConnectionPool.run()
 
     @task_postrun.connect
-    def task_postrun_handler(sender=None, task_id=None, args=None, kwargs=None, **other_kwargs):
+    def task_postrun_handler(sender: 'BaseTask | None' = None, task_id=None, args=None, kwargs=None, **other_kwargs):
         """Handle task completion after running."""
-        DebugUtil.debug(f"Task {sender.name} completed with task ID: {task_id}")
-        if task_id is not None:
-            task_key = BaseTask.generate_unique_task_id(sender.name, args, kwargs)
+        if sender is not None:
+            DebugUtil.debug(f"Task {sender.name} completed with task ID: {task_id}")
+            if task_id is not None:
+                task_key = BaseTask.generate_unique_task_id(sender.name, args, kwargs)
             if get_redis_client():
                 DebugUtil.debug(f"Deleting task key {task_key} from Redis.")
                 get_redis_client().delete(task_key)
@@ -79,8 +80,11 @@ class BaseTask(Task):
         BaseTask._clear_cache()
 
     @task_failure.connect
-    def task_failure_handler(sender=None, exception=None, args=None, kwargs=None, **other_kwargs):
+    def task_failure_handler(sender: 'BaseTask | None' = None, exception=None, args=None, kwargs=None, **other_kwargs):
         """Handle task failure."""
+        if sender is None:
+            return
+
         # === Fallback call ===
         try:
             failed_method_sufix = "__fallback"

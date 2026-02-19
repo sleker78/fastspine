@@ -9,6 +9,7 @@ FastStack provides flexible configuration options for databases, caching, middle
 Use Pydantic settings for type-safe configuration:
 
 ```python
+from functools import lru_cache
 from pydantic_settings import BaseSettings
 from faststack.database.engine import DBConfig
 
@@ -52,7 +53,11 @@ class AppSettings(BaseSettings):
             service=self.DB_SERVICE
         )
 
-settings = AppSettings()
+@lru_cache()
+def get_settings() -> AppSettings:
+    return AppSettings()
+
+settings = get_settings()
 ```
 
 ### 2. Environment Variables
@@ -263,19 +268,70 @@ celery_app = get_celery_instance(settings)
 
 ```python
 from faststack.celery.base_task import BaseTask
+from faststack.dependencies.services import load_services
+from faststack.lib.contextualize import with_contextualize
 
-class MyTask(BaseTask):
-    def run(self, *args, **kwargs):
-        # Your task logic
-        return "Task completed"
+@client.task(bind=True, model=BaseTask, acks_late=True, reject_on_worker_lost=True)
+@with_contextualize(input_list_id="input_list_id")
+def process_data_task(
+    self,
+    input_list_id: int,
+    title: str,
+    description: str,
+    send_email: bool = True,
+) -> bool:
+    """Process data with FastStack services and proper error handling."""
 
-# Fallback function (optional)
-def my_task__fallback(*args, **kwargs):
-    # Executed if MyTask fails
-    logger.error("Task failed, executing fallback")
+    # Load multiple services with dependency injection
+    data_service, email_service = load_services([
+        DataProcessingService,
+        EmailService
+    ])
 
-# Register task
-celery_app.register_task(MyTask())
+    # Get repository through service
+    data_repo = data_service.rm.get(DataRepository)
+    data_item = data_repo.get_instance(input_list_id)
+
+    # Register task start
+    data_service.register_worker_started(data_item=data_item)
+
+    try:
+        # Business logic here
+        result = data_service.process_complex_data(
+            title=title,
+            description=description,
+            data_item=data_item
+        )
+
+        # Register successful completion
+        data_service.register_successful_finish(
+            data_item=data_item,
+            send_email=send_email
+        )
+
+        return True
+
+    except Exception as e:
+        # Log error with profiler
+        data_service.profiler.error("Task failed", extra={"error": str(e)})
+        raise
+
+
+def process_data_task__fallback(input_list_id: int, *args, **kwargs) -> bool:
+    """Fallback function executed if main task fails."""
+    send_email = kwargs.get("send_email", False)
+
+    # Load service for cleanup
+    data_service = load_service(DataProcessingService)
+    data_item = data_service.rm.get(DataRepository).get_instance(input_list_id)
+
+    # Register failed finish
+    data_service.register_failed_finish(
+        data_item=data_item,
+        send_email=send_email
+    )
+
+    return True
 ```
 
 ## Environment-Specific Configuration
@@ -307,23 +363,18 @@ class ProductionSettings(AppSettings):
         env_file = ".env.prod"
 ```
 
-### Load Environment-Specific Settings
+### Load Settings with Environment Variables
+
+Simply use environment variables or different `.env` files:
 
 ```python
-import os
-from typing import Type
+# Production: Set ENV_FILE environment variable
+# export ENV_FILE=".env.prod"
+#
+# Or use different env files directly:
+# settings = AppSettings(_env_file=".env.prod")
 
-def get_settings() -> Type[AppSettings]:
-    env = os.getenv("ENVIRONMENT", "development")
-
-    if env == "production":
-        return ProductionSettings()
-    elif env == "staging":
-        return StagingSettings()
-    else:
-        return DevelopmentSettings()
-
-settings = get_settings()
+settings = get_settings()  # Uses .env by default
 ```
 
 ## Docker Configuration
@@ -376,36 +427,6 @@ volumes:
   redis_data:
 ```
 
-## Configuration Validation
-
-### Custom Validators
-
-```python
-from pydantic import validator
-from pydantic_settings import BaseSettings
-
-class AppSettings(BaseSettings):
-    DB_PASSWORD: str
-    REDIS_URL: str
-
-    @validator('DB_PASSWORD')
-    def validate_password(cls, v):
-        if len(v) < 8:
-            raise ValueError('Password must be at least 8 characters')
-        return v
-
-    @validator('REDIS_URL')
-    def validate_redis_url(cls, v):
-        if not v.startswith(('redis://', 'rediss://')):
-            raise ValueError('Invalid Redis URL format')
-        return v
-
-    def validate_config(self):
-        """Custom validation logic."""
-        if self.CACHE_ENABLED and not self.REDIS_URL:
-            raise ValueError("Redis URL required when cache is enabled")
-```
-
 ## Best Practices
 
 ### 1. Security
@@ -422,22 +443,11 @@ class AppSettings(BaseSettings):
 - ✅ Choose ASGI middleware for high-throughput apps
 - ✅ Tune Redis memory settings
 
-### 3. Monitoring
-
-```python
-class MonitoringSettings(BaseSettings):
-    # Profiler settings
-    PROFILER_ENABLED: bool = True
-    PROFILER_SAMPLE_RATE: float = 0.1
-
-    # Logging
-    LOG_LEVEL: str = "INFO"
-    LOG_FORMAT: str = "json"
-
-    # Metrics
-    METRICS_ENABLED: bool = True
-    METRICS_PORT: int = 9090
-```
+### 3. Configuration
+- ✅ Use `@lru_cache()` for settings instances
+- ✅ Keep settings simple and focused
+- ✅ Use environment variables for different environments
+- ✅ Leverage Pydantic's built-in validation
 
 ## Next Steps
 

@@ -17,14 +17,34 @@ from faststack import run_fast_core_app
 from faststack.database.engine import DBConfig
 from faststack.dependencies.database import register_session
 from faststack.dependencies.repositories import repository_dep
+from faststack.dependencies.services import service_dep
 from faststack.lib.profiler import Profiler
 from faststack.models.base import BaseModel as SQLBaseModel
 from faststack.repositories.base_repository import BaseRepository
+from faststack.util.dates import now
+from pydantic_settings import BaseSettings
 
 # Configuration
-db_config = DBConfig(
-    host="localhost", port=5432, dbname="faststack_hello", user="postgres", password="password", service="postgres"
-)
+class Settings(BaseSettings):
+    DB_HOST: str = "localhost"
+    DB_PORT: int = 5432
+    DB_NAME: str = "faststack_hello"
+    DB_USER: str = "postgres"
+    DB_PASSWORD: str = "password"
+    PROJECT_NAME: str = "FastStack Hello World"
+
+    @property
+    def db_config(self) -> DBConfig:
+        return DBConfig(
+            host=self.DB_HOST,
+            port=self.DB_PORT,
+            dbname=self.DB_NAME,
+            user=self.DB_USER,
+            password=self.DB_PASSWORD,
+            service="postgres"
+        )
+
+settings = Settings()
 
 
 # SQLAlchemy Model
@@ -33,7 +53,7 @@ class Greeting(SQLBaseModel):
 
     id = Column(Integer, primary_key=True)
     message = Column(String(255), nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=now)
 
 
 # Pydantic Response Model
@@ -48,8 +68,7 @@ class GreetingResponse(BaseModel):
 
 # Repository
 class GreetingRepository(BaseRepository[Greeting]):
-    def __init__(self, db: Session, profiler: Profiler):
-        super().__init__(db, profiler)
+    """Repository for greeting data access - automatic session injection."""
 
     def create_greeting(self, message: str) -> Greeting:
         """Create a new greeting."""
@@ -61,20 +80,45 @@ class GreetingRepository(BaseRepository[Greeting]):
         return self.db.query(self.model).order_by(self.model.created_at.desc()).limit(limit).all()
 
 
+# Service
+from faststack.services.base_service import BaseService
+from faststack.dependencies.repository_manager import repository_manager_dep
+from faststack.repositories.repository_manager import RepositoryManager
+
+class LocalRepositoryManager(RepositoryManager[Session]):
+    """Repository manager for local session."""
+    pass
+
+class GreetingService(BaseService):
+    """Service for greeting business logic."""
+
+    def __init__(self, rm: LocalRepositoryManager = repository_manager_dep(LocalRepositoryManager)):
+        super().__init__()
+        self.rm = rm
+
+    async def create_greeting(self, message: str) -> Greeting:
+        """Create greeting with business logic."""
+        # Business logic here (validation, transformation, etc.)
+        if not message.strip():
+            raise ValueError("Message cannot be empty")
+
+        repo = self.rm.get(GreetingRepository)
+        return repo.create_greeting(message.strip())
+
+    async def get_greetings(self, limit: int = 10) -> list[Greeting]:
+        """Get greetings with business logic."""
+        if limit > 100:
+            limit = 100  # Business rule: max 100 results
+
+        repo = self.rm.get(GreetingRepository)
+        return repo.get_latest_greetings(limit)
+
+
 # Register database session
-register_session(Session, db_config)
+register_session(Session, settings.db_config)
 
 # Create FastStack app
-app = run_fast_core_app()
-
-
-# Create tables
-@app.on_event("startup")
-async def create_tables():
-    """Create database tables on startup."""
-    engine = db_config.create_engine()
-    SQLBaseModel.metadata.create_all(engine)
-
+app = run_fast_core_app(settings)
 
 # Routes
 @app.get("/")
@@ -86,28 +130,34 @@ async def root():
 @app.get("/health")
 async def health():
     """Health check endpoint."""
-    return {"status": "healthy", "timestamp": datetime.utcnow()}
+    return {"status": "healthy", "timestamp": now()}
 
 
 @app.post("/greetings", response_model=GreetingResponse)
 async def create_greeting(
-    message: str, greeting_repo: GreetingRepository = repository_dep(GreetingRepository)
+    message: str,
+    greeting_service: GreetingService = service_dep(GreetingService)
 ) -> GreetingResponse:
     """Create a new greeting with automatic dependency injection."""
-    greeting = greeting_repo.create_greeting(message)
-    return GreetingResponse.from_orm(greeting)
+    greeting = await greeting_service.create_greeting(message)
+    return GreetingResponse.model_validate(greeting)
 
 
 @app.get("/greetings", response_model=list[GreetingResponse])
 async def get_greetings(
-    limit: int = 10, greeting_repo: GreetingRepository = repository_dep(GreetingRepository)
+    limit: int = 10,
+    greeting_service: GreetingService = service_dep(GreetingService)
 ) -> list[GreetingResponse]:
     """Get the latest greetings."""
-    greetings = greeting_repo.get_latest_greetings(limit)
-    return [GreetingResponse.from_orm(g) for g in greetings]
+    greetings = await greeting_service.get_greetings(limit)
+    return [GreetingResponse.model_validate(g) for g in greetings]
 
 
 if __name__ == "__main__":
+    # NOTE: This is for development only!
+    # For production, use a proper ASGI server like:
+    # uvicorn main:app --host 0.0.0.0 --port 8000 --workers 4
+    # or gunicorn with uvicorn workers
     import uvicorn
 
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

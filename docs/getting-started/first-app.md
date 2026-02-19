@@ -118,48 +118,47 @@ Create `app/models/user.py`:
 ```python
 from sqlalchemy import Column, Integer, String, DateTime, Text, ForeignKey
 from sqlalchemy.orm import relationship
-from datetime import datetime
 
 from faststack.models.base import BaseModel
-from faststack.mixins import SoftDeleteMixin
+from faststack.mixins import SoftDeleteMixin, CreatedAtMixin
 
 # PRIMARY DATABASE MODELS (Alembic-managed)
 # These models will have migrations and live in the main app database
 
-class User(BaseModel, SoftDeleteMixin):
+class User(BaseModel, CreatedAtMixin, SoftDeleteMixin):
     __tablename__ = "users"
 
     id = Column(Integer, primary_key=True)
     email = Column(String(255), unique=True, nullable=False)
     username = Column(String(100), unique=True, nullable=False)
     full_name = Column(String(255))
-    created_at = Column(DateTime, default=datetime.utcnow)
+    # created_at automatically added by CreatedAtMixin!
 
     # Relationships
     posts = relationship("Post", back_populates="author")
     comments = relationship("Comment", back_populates="author")
 
-class Post(BaseModel, SoftDeleteMixin):
+class Post(BaseModel, CreatedAtMixin, SoftDeleteMixin):
     __tablename__ = "posts"
 
     id = Column(Integer, primary_key=True)
     title = Column(String(255), nullable=False)
     content = Column(Text)
     author_id = Column(Integer, ForeignKey("users.id"))
-    created_at = Column(DateTime, default=datetime.utcnow)
+    # created_at automatically added by CreatedAtMixin!
 
     # Relationships
     author = relationship("User", back_populates="posts")
     comments = relationship("Comment", back_populates="post")
 
-class Comment(BaseModel):
+class Comment(BaseModel, CreatedAtMixin):
     __tablename__ = "comments"
 
     id = Column(Integer, primary_key=True)
     content = Column(Text, nullable=False)
     post_id = Column(Integer, ForeignKey("posts.id"))
     author_id = Column(Integer, ForeignKey("users.id"))
-    created_at = Column(DateTime, default=datetime.utcnow)
+    # created_at automatically added by CreatedAtMixin!
 
     # Relationships
     post = relationship("Post", back_populates="comments")

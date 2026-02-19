@@ -51,7 +51,20 @@ docker run --name hello-db \
 createdb hello_world
 ```
 
-### 3. Single File Application
+### 3. Database Migration (Production Way)
+
+```bash
+# Initialize Alembic
+alembic init alembic
+
+# Create migration for Greeting table
+alembic revision --autogenerate -m "Add greeting table"
+
+# Apply migration
+alembic upgrade head
+```
+
+### 4. Single File Application
 
 Create `main.py`:
 
@@ -147,13 +160,8 @@ register_sessions([(SessionLocal, DB_CONFIG)])
 # Create FastStack app
 app = run_fast_core_app()
 
-# Create tables on startup
-@app.on_event("startup")
-async def create_tables():
-    """Create database tables"""
-    engine = DB_CONFIG.create_engine()
-    SQLBaseModel.metadata.create_all(engine)
-    print("🚀 Hello World app started!")
+# Note: In production, use Alembic migrations instead of create_all()
+# This example assumes you've already run: alembic upgrade head
 
 # API Endpoints
 @app.get("/")
@@ -184,7 +192,7 @@ if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
 ```
 
-### 4. Run the Application
+### 5. Run the Application
 
 ```bash
 # Using uv
@@ -268,7 +276,7 @@ class GreetingService(BaseService):
 - Session creation and cleanup
 - Connection pooling
 - Transaction management
-- Table creation
+- Request-scoped resource management
 
 ## Interactive Documentation
 

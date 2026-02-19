@@ -9,10 +9,12 @@ readme = "README.md"
 requires-python = ">=3.12,<3.13"
 dependencies = [
     "celery>=5.3.1,<6",
+    "ecs-logging>=2.0.0",
     "fastapi>=0.100.0,<1",
     "httpx>=0.28.1",
     "pydantic>=2",
     "pydantic-settings>=2.3.4",
+    "psutil>=5.9.0",
     "python-dateutil>=2.9.0,<3",
     "pytest>=8.3.3",
     "redis>=5.0.7",
@@ -23,6 +25,7 @@ dependencies = [
     "polars>=0.20.13",
     "fastapi-mail>=1.5.0",
     "openpyxl>=3.1.5",
+    "termcolor>=2.3.0",
 ]
 
 [dependency-groups]
@@ -48,14 +51,15 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.deptry]
-exclude = ["docs", ".venv", "venv", "node_modules", "__pycache__", ".git"]
+exclude = ["docs", ".venv", "venv", "node_modules", "__pycache__", ".git", ".uv-cache"]
 
 [tool.deptry.per_rule_ignores]
 DEP002 = ["openpyxl"]
-DEP003 = ["httpx", "ecs_logging", "termcolor", "psutil"]
+DEP003 = ["httpx"]
 
 [tool.mypy]
 ignore_missing_imports = true
 follow_imports = "skip"
+check_untyped_defs = true
 # disable_error_code = ["import", "attr-defined", "name-defined", "misc", "no-untyped-def", "no-untyped-call", "var-annotated", "arg-type", "assignment", "return-value", "call-overload", "union-attr", "operator", "index", "type-arg", "valid-type", "func-returns-value", "return", "abstract", "override", "annotation-unchecked", "dict-item", "call-arg", "list-item", "has-type","type-var"]
 enable_error_code = ["unused-awaitable"]

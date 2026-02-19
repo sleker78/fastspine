@@ -317,25 +317,21 @@ class PickledEncoder:
         return pickle.dumps(value)
 ```
 
-#### Stampedo Protection
+#### Built-in Stampede Protection
+
+FastStack's `@cache_method_async` automatically prevents cache stampede:
 
 ```python
 @cache_method_async(expire=300)
 async def expensive_operation(self, param: str):
-    cache_key = KeyBuilder.key_builder(func, args=args, kwargs=kwargs)
+    # FastStack automatically:
+    # 1. Generates cache key from method signature
+    # 2. Uses Redis locks to prevent multiple concurrent computations
+    # 3. Only one request computes the value, others wait
+    # 4. All requests get the same cached result
 
-    # Redis lock prevents cache stampede
-    redis_lock = lock(cache_key)
-    acquired = redis_lock.acquire(blocking=True, timeout=30)
-
-    try:
-        # Only one request computes the value
-        result = await compute_expensive_result(param)
-        cache_set(cache_key, result, expire_seconds)
-        return result
-    finally:
-        if acquired:
-            redis_lock.release()
+    result = await compute_expensive_result(param)
+    return result  # Cached automatically with stampede protection
 ```
 
 #### Cache Key Generation

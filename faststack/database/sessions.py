@@ -1,4 +1,4 @@
-from typing import Type, TypeVar, Union
+from typing import Type, TypeVar, Union, cast
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
@@ -32,7 +32,7 @@ class SessionConnectionPool:
 
     def get(self, key: Union[Type[SESSION_T], SESSION_T]) -> SESSION_T:
         """Get the session from the pool."""
-        return self.pool.get(self._key_name(key), None)
+        return cast(SESSION_T, self.pool.get(self._key_name(key), None))
 
     def add(self, value: SESSION_T):
         """Add the session to the pool."""
