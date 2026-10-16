@@ -1,19 +1,18 @@
 from abc import ABCMeta
 
-from sqlalchemy import Column, Integer
-from sqlalchemy.ext.declarative import DeclarativeMeta, declarative_base
+from sqlalchemy import Integer
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
-class CustomBaseMeta(DeclarativeMeta, ABCMeta):
-    """Custom metaclass for SQLAlchemy models."""
+class CombinedMeta(type(DeclarativeBase), ABCMeta):  # type: ignore[misc]
+    """Metaclass that combines DeclarativeBase and ABCMeta."""
 
     pass
 
 
-class BaseModel:
-    """Base model with common id column."""
+class Base(DeclarativeBase, metaclass=CombinedMeta):
+    """Base class for SQLAlchemy models."""
 
-    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    __abstract__ = True
 
-
-Base = declarative_base(cls=BaseModel, metaclass=CustomBaseMeta)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True, autoincrement=True)

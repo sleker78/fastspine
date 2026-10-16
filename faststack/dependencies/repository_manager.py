@@ -1,5 +1,5 @@
 import contextvars
-from typing import Any, Callable, Dict, Type, TypeVar, Union, get_args, get_origin
+from typing import Any, Callable, get_args, get_origin
 
 from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -9,10 +9,9 @@ from ..ctx.ctx_pool import ctxpool
 from ..dependencies.database import DB_MAPPING, DB_SESSION_MAPPING
 from ..repositories.repository_manager import RepositoryManager
 
-REPO_MANAGER_T = TypeVar("REPO_MANAGER_T", bound=RepositoryManager)
 _repo_manager_cache_var: contextvars.ContextVar[dict] = ctxpool.new("_repo_manager_cache_var", default={})
 
-manager_annotations_classes: Dict[Type[Any], Dict[str, Any]] = {}
+manager_annotations_classes: dict[type[Any], dict[str, Any]] = {}
 
 
 def clear_repository_manager_cache():
@@ -20,20 +19,24 @@ def clear_repository_manager_cache():
     ctxpool.clear_one("_repo_manager_cache_var")
 
 
-def _is_valid_session_instance(param_type: Type, session_class: Type) -> bool:
-    """Check if the parameter type is a valid instance of the session class."""
-    if isinstance(param_type, type) and issubclass(param_type, session_class):
-        return True
-    if hasattr(param_type, "__bound__") and param_type.__bound__ in (Session, AsyncSession):
-        return True
-    if hasattr(param_type, "__args__") and any(
-        isinstance(arg, type) and issubclass(arg, (Session, AsyncSession)) for arg in param_type.__args__
-    ):
-        return True
-    return False
+def set_cached_repository_manager[REPO_MANAGER_T: RepositoryManager](
+    repo_manager_class: type[REPO_MANAGER_T], instance: REPO_MANAGER_T
+) -> None:
+    """Pre-populate the repository manager cache for the current context.
+
+    Used by non-DI scopes (e.g. a CLI command) to make a repository manager, bound to a
+    session opened for the scope's lifetime, available to every `load_repository_manager`
+    call made within that scope.
+    """
+    cache = ctxpool.get("_repo_manager_cache_var", default={})
+    new_cache = dict(cache)
+    new_cache[repo_manager_class] = instance
+    _repo_manager_cache_var.set(new_cache)
 
 
-def _read_manager_annotations(repo_manager_class: Type[REPO_MANAGER_T]) -> dict[str, Type]:
+def _read_manager_annotations[REPO_MANAGER_T: RepositoryManager](
+    repo_manager_class: type[REPO_MANAGER_T],
+) -> dict[str, type[Any]]:
     """Read repository manager annotations."""
     if repo_manager_class in manager_annotations_classes:
         return manager_annotations_classes[repo_manager_class]
@@ -43,7 +46,6 @@ def _read_manager_annotations(repo_manager_class: Type[REPO_MANAGER_T]) -> dict[
         orig_bases = getattr(repo_manager_class, "__orig_bases__", ())  # type: ignore
         for base in orig_bases:
             if get_origin(base) is RepositoryManager:
-                args = get_args(base)
                 args = get_args(base)
                 if args:
                     session_class = args[0]
@@ -58,7 +60,9 @@ def _read_manager_annotations(repo_manager_class: Type[REPO_MANAGER_T]) -> dict[
     return annotations
 
 
-def get_repository_manager(repo_manager_class: Type[REPO_MANAGER_T]) -> Callable[[], REPO_MANAGER_T]:
+def get_repository_manager[REPO_MANAGER_T: RepositoryManager](
+    repo_manager_class: type[REPO_MANAGER_T], isolated_session: bool = False
+) -> Callable[[], REPO_MANAGER_T]:
     """Get repo instance. Used for DI inside Fastapi Depends lifecycle."""
     annotations = _read_manager_annotations(repo_manager_class)
     session_class = annotations.get("db") if annotations else None
@@ -92,12 +96,12 @@ def get_repository_manager(repo_manager_class: Type[REPO_MANAGER_T]) -> Callable
             f"Repository {repo_manager_class.__name__} must have exactly one Session/AsyncSession parameter"
         )
 
-    def factory(db: Union[Session, AsyncSession] = Depends(session_func_name)) -> REPO_MANAGER_T:
+    def factory(db: AsyncSession = Depends(session_func_name, use_cache=not isolated_session)) -> REPO_MANAGER_T:
         """Factory function to create the repository manager instance."""
         dependencies = {}
         for param_name, param_type in annotations.items():
-            if (isinstance(param_type, type) and issubclass(param_type, (Session, AsyncSession))) or (
-                hasattr(param_type, "__bound__") and param_type.__bound__ in (Session, AsyncSession)
+            if (isinstance(param_type, type) and issubclass(param_type, (AsyncSession))) or (
+                hasattr(param_type, "__bound__") and param_type.__bound__ in (AsyncSession,)
             ):
                 dependencies[param_name] = db
         return repo_manager_class(**dependencies)
@@ -105,7 +109,7 @@ def get_repository_manager(repo_manager_class: Type[REPO_MANAGER_T]) -> Callable
     return factory
 
 
-def load_repository_manager(repo_manager_class: Type[REPO_MANAGER_T]) -> REPO_MANAGER_T:
+def load_repository_manager[REPO_MANAGER_T](repo_manager_class: type[REPO_MANAGER_T]) -> REPO_MANAGER_T:
     """Load repository manager.
 
     load_repository manager is a utility function designed to create and return an instance of a repository manager class.
@@ -122,6 +126,7 @@ def load_repository_manager(repo_manager_class: Type[REPO_MANAGER_T]) -> REPO_MA
 
     if session_class is None:
         raise ValueError(f"Could not determine session type for {repo_manager_class.__name__}")
+
     # Handle TypeVar bound sessions
     if hasattr(session_class, "__bound__") and session_class.__bound__ in (Session, AsyncSession):
         session_class = session_class.__bound__
@@ -147,8 +152,3 @@ def load_repository_manager(repo_manager_class: Type[REPO_MANAGER_T]) -> REPO_MA
     ctxpool.set("_repo_manager_cache_var", new_cache)
 
     return repo_instance
-
-
-def repository_manager_dep(repo_class: Type[REPO_MANAGER_T]) -> REPO_MANAGER_T:
-    """Repository dependency."""
-    return Depends(get_repository_manager(repo_class))

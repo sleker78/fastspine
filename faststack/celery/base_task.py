@@ -66,7 +66,7 @@ class BaseTask(Task):
         SessionConnectionPool.run()
 
     @task_postrun.connect
-    def task_postrun_handler(sender: 'BaseTask | None' = None, task_id=None, args=None, kwargs=None, **other_kwargs):
+    def task_postrun_handler(sender: "BaseTask | None" = None, task_id=None, args=None, kwargs=None, **other_kwargs):
         """Handle task completion after running."""
         if sender is not None:
             DebugUtil.debug(f"Task {sender.name} completed with task ID: {task_id}")
@@ -80,7 +80,7 @@ class BaseTask(Task):
         BaseTask._clear_cache()
 
     @task_failure.connect
-    def task_failure_handler(sender: 'BaseTask | None' = None, exception=None, args=None, kwargs=None, **other_kwargs):
+    def task_failure_handler(sender: "BaseTask | None" = None, exception=None, args=None, kwargs=None, **other_kwargs):
         """Handle task failure."""
         if sender is None:
             return

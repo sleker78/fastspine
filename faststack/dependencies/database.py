@@ -1,10 +1,10 @@
 import sys
 import uuid
 from collections.abc import Iterable
-from typing import Any, Callable, Dict, Type, Union
+from typing import Any, Callable
 
 from sqlalchemy.engine import Engine
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from sqlalchemy.orm import Session, sessionmaker
 
 from ..database.engine import DBConfig
@@ -17,7 +17,7 @@ class EngineMapping:
     def __init__(self):
         self._mapping = {}
 
-    def add(self, session_class: Session, config: dict | DBConfig):
+    def add(self, session_class: type[Session] | type[AsyncSession], config: dict | DBConfig):
         """Add a session class and its corresponding engine to the mapping."""
         engine = DBConfig.init_engine(config)
         self._mapping[session_class] = engine
@@ -27,14 +27,18 @@ class EngineMapping:
         return self._mapping.get(session_class)
 
 
-def _init_engine(config: Any | DBConfig) -> Engine:
+def _init_engine(config: dict | DBConfig) -> Engine | None:
     """Initialize the database engine based on the provided configuration."""
     if config is None:
         return None
     return DBConfig.init_engine(config)
 
 
-ENGINE_MAPPING: dict[Union[Type[Session], Type[AsyncSession]], Engine] = {}
+ENGINE_MAPPING: dict[type[Session] | type[AsyncSession], Engine] = {}
+
+DB_MAPPING: dict[type[Session] | type[AsyncSession], Callable[[], Any]] = {}
+
+DB_SESSION_MAPPING: dict[type[Session] | type[AsyncSession], Callable[[], Any]] = {}
 
 
 def get_sessionmaker(sessionclass):
@@ -51,20 +55,16 @@ def get_sessionmaker(sessionclass):
     raise ValueError(f"Unknown session class: {sessionclass}")
 
 
-def get_async_sessionmaker(sessionclass):
+def get_async_sessionmaker(sessionclass: type[AsyncSession]) -> async_sessionmaker[AsyncSession]:
     """Get the async session factory for the database."""
     session_engine = ENGINE_MAPPING.get(sessionclass)
     if session_engine is not None:
-        # In SQLAlchemy 1.4, we create AsyncSession directly with the async engine
-        def async_session_factory():
-            return sessionclass(bind=session_engine, autocommit=False, autoflush=False)
-
-        return async_session_factory
+        return async_sessionmaker(session_engine, expire_on_commit=False)
 
     raise ValueError(f"Unknown async session class: {sessionclass}")
 
 
-def _load_db(session_class: Union[Type[Session], Type[AsyncSession]]):
+def _load_db(session_class: type[Session] | type[AsyncSession]):
     session_connection_pool: SessionConnectionPool = SessionConnectionPool.run()
     db_session = session_connection_pool.get(session_class)
     token = None
@@ -80,7 +80,7 @@ def _load_db(session_class: Union[Type[Session], Type[AsyncSession]]):
     return db_session, session_connection_pool, token
 
 
-async def _aload_db(session_class: Type[AsyncSession]):
+def _aload_db(session_class: type[AsyncSession]) -> tuple[AsyncSession, SessionConnectionPool, uuid.UUID | None]:
     session_connection_pool: SessionConnectionPool = SessionConnectionPool.run()
     db_session = session_connection_pool.get(session_class)
     token = None
@@ -93,27 +93,20 @@ async def _aload_db(session_class: Type[AsyncSession]):
     return db_session, session_connection_pool, token
 
 
-def _close_db(db_session, token, session_connection_pool: SessionConnectionPool):
+def _close_db(db_session: Session, token: uuid.UUID | None, session_connection_pool: SessionConnectionPool):
     if token is not None:
         db_session.close()
         session_connection_pool.delete(db_session)
 
 
-async def _aclose_db(db_session, token, session_connection_pool: SessionConnectionPool):
+async def _aclose_db(db_session: AsyncSession, token: uuid.UUID | None, session_connection_pool: SessionConnectionPool):
     if token is not None:
         await db_session.close()
         await session_connection_pool.adelete(db_session)
 
 
-DB_MAPPING: Dict[Union[Type[Session], Type[AsyncSession]], Callable[[], Any]] = {}
-
-DB_SESSION_MAPPING: Dict[Union[Type[Session], Type[AsyncSession]], Callable[[], Any]] = {}
-
-
-def register_session(session: Type[Session], config: Any | DBConfig):
+def register_session(session: type[Session], config: Any | DBConfig):
     """Register a session with its corresponding engine."""
-    # keriraj naziv engina
-
     engine = _init_engine(config)
 
     if ENGINE_MAPPING.get(session) is not None:
@@ -154,7 +147,7 @@ def register_session(session: Type[Session], config: Any | DBConfig):
     DB_SESSION_MAPPING[session] = generic_db_session_method
 
 
-def register_async_session(session: Type[AsyncSession], config: Any | DBConfig):
+def register_async_session(session: type[AsyncSession], config: Any | DBConfig):
     """Register an async session with its corresponding engine."""
     engine = _init_engine(config)
 
@@ -196,10 +189,12 @@ def register_async_session(session: Type[AsyncSession], config: Any | DBConfig):
     DB_SESSION_MAPPING[session] = generic_async_db_session_method
 
 
-def register_sessions(pairs: Iterable[tuple[Union[Type[Session], Type[AsyncSession]], Any | DBConfig]]):
+def register_sessions(pairs: Iterable[tuple[type[Session] | type[AsyncSession], Any | DBConfig]]):
     """Register multiple sessions with their configs."""
     for session, config in pairs:
         if issubclass(session, AsyncSession):
             register_async_session(session, config)
-        else:
+        elif issubclass(session, Session):
             register_session(session, config)
+        else:
+            raise ValueError(f"Invalid session type: {session.__name__}. Must be Session or AsyncSession.")

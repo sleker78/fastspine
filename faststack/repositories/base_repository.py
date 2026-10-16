@@ -1,21 +1,18 @@
 from abc import ABC
-from typing import Generic, List, Type, TypeVar, Union, final
+from typing import Type, final
 
 from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import Session
 from sqlalchemy.sql.elements import BinaryExpression
 
-from faststack.lib.profiler import Profiler
-
+from ..lib.profiler import Profiler
 from ..mixins import SoftDeleteMixin
-from ..models.base import BaseModel
+from ..models.base import Base as BaseModel
 from ..repositories.abstract_repository import AbstractRepository
+from ..types import DBSessions
 
-T = TypeVar("T", bound=BaseModel)
 
-
-class BaseRepository(AbstractRepository, ABC, Generic[T]):
+class BaseRepository[T: BaseModel](AbstractRepository, ABC):
     """Base repository class for database operations.
 
     This class provides a common interface for all repository classes.
@@ -27,7 +24,7 @@ class BaseRepository(AbstractRepository, ABC, Generic[T]):
         profiler (Profiler): The profiler instance for performance tracking.
     """
 
-    def __init__(self, db: Union[Session, AsyncSession], profiler: Profiler):
+    def __init__(self, db: DBSessions, profiler: Profiler):
         """Initialize the repository with a database session and profiler.
 
         Args:
@@ -55,7 +52,7 @@ class BaseRepository(AbstractRepository, ABC, Generic[T]):
         except (AttributeError, IndexError) as err:
             raise ValueError("Repository {self.__class__} must inherit with model type parameter") from err
 
-    def get_by_id(self, instance_id: int) -> T | None:
+    def sync_get_by_id(self, instance_id: int) -> T | None:
         """Get an object by its ID.
 
         Args:
@@ -72,7 +69,7 @@ class BaseRepository(AbstractRepository, ABC, Generic[T]):
             )
         return self.db.query(self.model).filter(self.model.id == instance_id).one_or_none()
 
-    def get_instance(self, instance_id: int) -> T:
+    def sync_get_instance(self, instance_id: int) -> T:
         """Get an object by its ID.
 
         Args:
@@ -81,12 +78,12 @@ class BaseRepository(AbstractRepository, ABC, Generic[T]):
         Returns:
             T: The object with the given ID, or None if it does not exist.
         """
-        instance = self.get_by_id(instance_id)
+        instance = self.sync_get_by_id(instance_id)
         if instance is None:
             raise ValueError(f"{self.model.__name__} with id {instance_id} does not exist.")
         return instance
 
-    def get(self, instance_id: int) -> T | None:
+    def sync_get(self, instance_id: int) -> T | None:
         """Get an object by its ID.
 
         Args:
@@ -97,7 +94,7 @@ class BaseRepository(AbstractRepository, ABC, Generic[T]):
         """
         return self.db.get(self.model, instance_id)
 
-    def read_commit(self) -> None:
+    def sync_read_commit(self) -> None:
         """Check if there are some changed/deleted or new objects and it there are no perform commit."""
         if self.db.new or self.db.dirty or self.db.deleted:
             raise ValueError(
@@ -105,11 +102,11 @@ class BaseRepository(AbstractRepository, ABC, Generic[T]):
             )
         return self.db.commit()
 
-    def commit(self):
+    def sync_commit(self):
         """Commit the current transaction."""
         self.db.commit()
 
-    def soft_delete(self, instance: T, commit: bool = True) -> None:
+    def sync_soft_delete(self, instance: T, commit: bool = True) -> None:
         """Soft delete an object by setting its deleted_at field to the current time.
 
         Args:
@@ -122,9 +119,9 @@ class BaseRepository(AbstractRepository, ABC, Generic[T]):
         instance.set_deleted()
         self.db.add(instance)
         if commit:
-            self.commit()
+            self.sync_commit()
 
-    def delete(self, instance: T, commit: bool = True) -> None:
+    def sync_delete(self, instance: T, commit: bool = True) -> None:
         """Delete an object from the database.
 
         Args:
@@ -132,18 +129,18 @@ class BaseRepository(AbstractRepository, ABC, Generic[T]):
         """
         self.db.delete(instance)
         if commit:
-            self.commit()
+            self.sync_commit()
 
-    def bulk_delete(self, ids: list[int], commit: bool = True) -> None:
+    def sync_bulk_delete(self, ids: list[int], commit: bool = True) -> None:
         """Bulk delete objects by their IDs."""
         if issubclass(self.model, SoftDeleteMixin):
             raise TypeError(f"{self.model.__name__} does not support bulk deletion use bulk soft delete instead.")
         self.db.query(self.model).filter(self.model.id.in_(ids)).delete()
 
         if commit:
-            self.commit()
+            self.sync_commit()
 
-    def bulk_soft_delete(self, ids: list[int], commit: bool = True) -> None:
+    def sync_bulk_soft_delete(self, ids: list[int], commit: bool = True) -> None:
         """Bulk soft delete objects by their IDs."""
         if not issubclass(self.model, SoftDeleteMixin):
             raise TypeError(f"{self.model.__name__} does not support bulk soft deletion.")
@@ -154,9 +151,9 @@ class BaseRepository(AbstractRepository, ABC, Generic[T]):
             self.db.add(instance)
 
         if commit:
-            self.commit()
+            self.sync_commit()
 
-    def count_by(self, *criterion: Union[BinaryExpression, List[BinaryExpression]]) -> int:
+    def sync_count_by(self, *criterion: BinaryExpression | list[BinaryExpression]) -> int:
         """Count objects by given criteria."""
         filters = []
         # If there's one argument and it's a list, unpack it
@@ -169,7 +166,7 @@ class BaseRepository(AbstractRepository, ABC, Generic[T]):
 
         return self.db.query(self.model).filter(*filters).count()
 
-    def filter_by(self, *criterion: Union[BinaryExpression, List[BinaryExpression]]) -> list[T]:
+    def sync_filter_by(self, *criterion: BinaryExpression | list[BinaryExpression]) -> list[T]:
         """Filter objects by given criteria."""
         filters = []
         # If there's one argument and it's a list, unpack it
@@ -180,7 +177,7 @@ class BaseRepository(AbstractRepository, ABC, Generic[T]):
 
         return self.db.query(self.model).filter(*filters).all()
 
-    def filter_one_by(self, *criterion: Union[BinaryExpression, List[BinaryExpression]]) -> T | None:
+    def sync_filter_one_by(self, *criterion: BinaryExpression | list[BinaryExpression]) -> T | None:
         """Filter objects by given criteria and return one result."""
         filters = []
         # If there's one argument and it's a list, unpack it
@@ -193,13 +190,13 @@ class BaseRepository(AbstractRepository, ABC, Generic[T]):
 
         return self.db.query(self.model).filter(*filters).one_or_none()
 
-    def filter_one(self, **kwargs) -> T | None:
+    def sync_filter_one(self, **kwargs) -> T | None:
         """Filter objects by given criteria and return one result."""
         if issubclass(self.model, SoftDeleteMixin):
             kwargs["deleted_at"] = None
         return self.db.query(self.model).filter_by(**kwargs).one_or_none()
 
-    def create(self, instance: T, flush: bool = True, commit: bool = False) -> T:
+    def sync_create(self, instance: T, flush: bool = True, commit: bool = False) -> T:
         """Create a new object in the database.
 
         Args:
@@ -212,11 +209,11 @@ class BaseRepository(AbstractRepository, ABC, Generic[T]):
         if flush:
             self.db.flush()
         if commit:
-            self.commit()
+            self.sync_commit()
 
         return instance
 
-    async def aget(self, instance_id: int) -> T | None:
+    async def get(self, instance_id: int) -> T | None:
         """Async get an object by its ID.
 
         Args:
@@ -229,13 +226,13 @@ class BaseRepository(AbstractRepository, ABC, Generic[T]):
             raise TypeError("aget async method requires AsyncSession")
         return await self.db.get(self.model, instance_id)
 
-    async def acommit(self):
+    async def commit(self):
         """Async commit the current transaction."""
         if not isinstance(self.db, AsyncSession):
-            raise TypeError("acommit async method requires AsyncSession")
+            raise TypeError("commit async method requires AsyncSession")
         await self.db.commit()
 
-    async def aread_commit(self) -> None:
+    async def read_commit(self) -> None:
         """Async check if there are some changed/deleted or new objects and if there are none perform commit."""
         if not isinstance(self.db, AsyncSession):
             raise TypeError("aread_commit async method requires AsyncSession")
@@ -245,19 +242,19 @@ class BaseRepository(AbstractRepository, ABC, Generic[T]):
             )
         return await self.db.commit()
 
-    async def arollback(self):
+    async def rollback(self):
         """Async rollback the current transaction."""
         if not isinstance(self.db, AsyncSession):
-            raise TypeError("arollback async method requires AsyncSession")
+            raise TypeError("rollback async method requires AsyncSession")
         await self.db.rollback()
 
-    async def aflush(self):
+    async def flush(self):
         """Async flush the current transaction."""
         if not isinstance(self.db, AsyncSession):
-            raise TypeError("aflush async method requires AsyncSession")
+            raise TypeError("flush async method requires AsyncSession")
         await self.db.flush()
 
-    async def aget_by_id(self, instance_id: int) -> T | None:
+    async def get_by_id(self, instance_id: int) -> T | None:
         """Async get an object by its ID.
 
         Args:
@@ -278,7 +275,7 @@ class BaseRepository(AbstractRepository, ABC, Generic[T]):
         result = await self.db.execute(select(self.model).filter(self.model.id == instance_id))
         return result.scalar_one_or_none()
 
-    async def aget_instance(self, instance_id: int) -> T:
+    async def get_instance(self, instance_id: int) -> T:
         """Async get an object by its ID.
 
         Args:
@@ -290,12 +287,12 @@ class BaseRepository(AbstractRepository, ABC, Generic[T]):
         Raises:
             ValueError: If the object does not exist.
         """
-        instance = await self.aget_by_id(instance_id)
+        instance = await self.get_by_id(instance_id)
         if instance is None:
             raise ValueError(f"{self.model.__name__} with id {instance_id} does not exist.")
         return instance
 
-    async def asoft_delete(self, instance: T, commit: bool = True) -> None:
+    async def soft_delete(self, instance: T, commit: bool = True) -> None:
         """Async soft delete an object by setting its deleted_at field to the current time.
 
         Args:
@@ -303,7 +300,7 @@ class BaseRepository(AbstractRepository, ABC, Generic[T]):
             commit (bool): Whether to commit the transaction after the operation.
         """
         if not isinstance(self.db, AsyncSession):
-            raise TypeError("asoft_delete async method requires AsyncSession")
+            raise TypeError("soft_delete async method requires AsyncSession")
 
         if not isinstance(instance, SoftDeleteMixin):
             raise TypeError(f"{instance.__class__.__name__} does not support soft deletion.")
@@ -311,12 +308,12 @@ class BaseRepository(AbstractRepository, ABC, Generic[T]):
         instance.set_deleted()
         self.db.add(instance)
         if commit:
-            await self.acommit()
+            await self.commit()
 
-    async def abulk_soft_delete(self, ids: list[int], commit: bool = True) -> None:
+    async def bulk_soft_delete(self, ids: list[int], commit: bool = True) -> None:
         """Async bulk soft delete objects by their IDs."""
         if not isinstance(self.db, AsyncSession):
-            raise TypeError("abulk_soft_delete async method requires AsyncSession")
+            raise TypeError("bulk_soft_delete async method requires AsyncSession")
 
         if not issubclass(self.model, SoftDeleteMixin):
             raise TypeError(f"{self.model.__name__} does not support bulk soft deletion.")
@@ -328,25 +325,21 @@ class BaseRepository(AbstractRepository, ABC, Generic[T]):
             self.db.add(instance)
 
         if commit:
-            await self.acommit()
+            await self.commit()
 
-    async def acount_by(self, *criterion: Union[BinaryExpression, List[BinaryExpression]]) -> int:
-        """Async count objects by given criteria."""
-        if not isinstance(self.db, AsyncSession):
-            raise TypeError("acount_by async method requires AsyncSession")
-
+    async def count_by(self, *criterion: BinaryExpression | list[BinaryExpression]) -> int:
+        """Count objects by given criteria."""
         filters = []
+        # If there's one argument and it's a list, unpack it
         if len(criterion) == 1 and isinstance(criterion[0], list):
             filters = criterion[0]
         else:
-            filters = list(criterion)
-        if issubclass(self.model, SoftDeleteMixin):
-            filters.append(self.model.deleted_at.is_(None))
+            filters = [c for c in criterion if isinstance(c, BinaryExpression)]
 
-        result = await self.db.execute(select(func.count(self.model.id)).filter(*filters))
-        return result.scalar()
+        stmt = select(func.count()).select_from(self.model).where(*filters)
+        return (await self.db.execute(stmt)).scalar()
 
-    async def adelete(self, instance: T, commit: bool = True) -> None:
+    async def delete(self, instance: T, commit: bool = True) -> None:
         """Async delete an object from the database.
 
         Args:
@@ -358,12 +351,12 @@ class BaseRepository(AbstractRepository, ABC, Generic[T]):
 
         await self.db.delete(instance)
         if commit:
-            await self.acommit()
+            await self.commit()
 
-    async def abulk_delete(self, ids: list[int], commit: bool = True) -> None:
+    async def bulk_delete(self, ids: list[int], commit: bool = True) -> None:
         """Async bulk delete objects by their IDs."""
         if not isinstance(self.db, AsyncSession):
-            raise TypeError("abulk_delete async method requires AsyncSession")
+            raise TypeError("bulk_delete async method requires AsyncSession")
 
         if issubclass(self.model, SoftDeleteMixin):
             raise TypeError(f"{self.model.__name__} does not support bulk deletion use bulk soft delete instead.")
@@ -371,12 +364,12 @@ class BaseRepository(AbstractRepository, ABC, Generic[T]):
         await self.db.execute(delete(self.model).filter(self.model.id.in_(ids)))
 
         if commit:
-            await self.acommit()
+            await self.commit()
 
-    async def afilter_by(self, *criterion: Union[BinaryExpression, List[BinaryExpression]]) -> list[T]:
+    async def filter_by(self, *criterion: BinaryExpression | list[BinaryExpression]) -> list[T]:
         """Async filter objects by given criteria."""
         if not isinstance(self.db, AsyncSession):
-            raise TypeError("afilter_by async method requires AsyncSession")
+            raise TypeError("filter_by async method requires AsyncSession")
 
         filters = []
         if len(criterion) == 1 and isinstance(criterion[0], list):
@@ -387,35 +380,26 @@ class BaseRepository(AbstractRepository, ABC, Generic[T]):
         result = await self.db.execute(select(self.model).filter(*filters))
         return result.scalars().all()
 
-    async def afilter_one_by(self, *criterion: Union[BinaryExpression, List[BinaryExpression]]) -> T | None:
-        """Async filter objects by given criteria and return one result."""
-        if not isinstance(self.db, AsyncSession):
-            raise TypeError("afilter_one_by async method requires AsyncSession")
-
+    async def filter_one_by(self, *criterion: BinaryExpression | list[BinaryExpression]) -> T | None:
+        """Filter objects by given criteria and return one result."""
         filters = []
+        # If there's one argument and it's a list, unpack it
         if len(criterion) == 1 and isinstance(criterion[0], list):
             filters = criterion[0]
         else:
-            filters = list(criterion)
-        if issubclass(self.model, SoftDeleteMixin):
-            filters.append(self.model.deleted_at.is_(None))
+            filters = [c for c in criterion if isinstance(c, BinaryExpression)]
 
-        result = await self.db.execute(select(self.model).filter(*filters))
-        return result.scalar_one_or_none()
+        return (await self.db.execute(select(self.model).where(*filters))).scalar_one_or_none()
 
-    async def afilter_one(self, **kwargs) -> T | None:
-        """Async filter objects by given criteria and return one result."""
-        if not isinstance(self.db, AsyncSession):
-            raise TypeError("afilter_one async method requires AsyncSession")
+    async def filter_one(self, **kwargs) -> T | None:
+        """Filter objects by given criteria and return one result."""
+        filters = []
+        for key, value in kwargs.items():
+            filters.append(getattr(self.model, key) == value)
 
-        if issubclass(self.model, SoftDeleteMixin):
-            kwargs["deleted_at"] = None
+        return (await self.db.execute(select(self.model).where(*filters))).scalar_one_or_none()
 
-        filters = [getattr(self.model, key) == value for key, value in kwargs.items()]
-        result = await self.db.execute(select(self.model).filter(*filters))
-        return result.scalar_one_or_none()
-
-    async def acreate(self, instance: T, flush: bool = True, commit: bool = False) -> T:
+    async def create(self, instance: T, flush: bool = True, commit: bool = False) -> T:
         """Async create a new object in the database.
 
         Args:
@@ -431,8 +415,8 @@ class BaseRepository(AbstractRepository, ABC, Generic[T]):
 
         self.db.add(instance)
         if flush:
-            await self.aflush()
+            await self.flush()
         if commit:
-            await self.acommit()
+            await self.commit()
 
         return instance

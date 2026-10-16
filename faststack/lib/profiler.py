@@ -5,7 +5,7 @@ import time
 from collections import defaultdict
 from contextlib import contextmanager
 from dataclasses import dataclass, field
-from typing import Any, Dict, Generator, List, Optional, Tuple
+from typing import Any, Generator, List, Tuple
 
 import psutil
 
@@ -45,7 +45,7 @@ class Profiler:
         self._track_memory = track_memory
         self._start_time = time.time()
         self._last_timestamp = 0.0
-        self._checkpoints: Dict[str, List[ProfileMetrics]] = defaultdict(list)
+        self._checkpoints: dict[str, List[ProfileMetrics]] = defaultdict(list)
         self._lock = threading.RLock()
         self._process = psutil.Process(os.getpid()) if track_memory else None
         self._start_memory = self._get_memory_usage() if track_memory else 0.0
@@ -99,7 +99,7 @@ class Profiler:
 
                 self._checkpoints[name].append(metrics)
 
-    def get_checkpoint_stats(self, name: str) -> Optional[Dict[str, float]]:
+    def get_checkpoint_stats(self, name: str) -> dict[str, float] | None:
         """Get statistics for a named checkpoint.
 
         Args:
@@ -123,7 +123,7 @@ class Profiler:
                 "peak_memory": max(m.peak_memory for m in metrics) if self._track_memory else 0.0,
             }
 
-    def stamp(self, message: str, checkpoint_name: Optional[str] = None) -> Tuple[float, str]:
+    def stamp(self, message: str, checkpoint_name: str | None = None) -> Tuple[float, str]:
         """Create timestamp for message with elapsed time and optional checkpoint.
 
         Args:
@@ -150,7 +150,7 @@ class Profiler:
 
             return elapsed, formatted_message
 
-    def log(self, level: int, message: str, *args: Any, checkpoint_name: Optional[str] = None, **kwds: Any) -> None:
+    def log(self, level: int, message: str, *args: Any, checkpoint_name: str | None = None, **kwds: Any) -> None:
         """Log message with automatic timing and memory information.
 
         Args:
@@ -166,7 +166,7 @@ class Profiler:
             self._last_timestamp = elapsed
 
             # Prepare extra timing data
-            extra_data: Dict[str, Any] = kwds.get("extra", {})
+            extra_data: dict[str, Any] = kwds.get("extra", {})
             extra_data.update(
                 {
                     "profiler_name": self._name,
@@ -187,23 +187,23 @@ class Profiler:
 
             logger.log(level, timed_message, *args, **log_kwargs)
 
-    def debug(self, message: str, *args: Any, checkpoint_name: Optional[str] = None, **kwds: Any) -> None:
+    def debug(self, message: str, *args: Any, checkpoint_name: str | None = None, **kwds: Any) -> None:
         """Log debug message with timing information."""
         self.log(logging.DEBUG, message, *args, checkpoint_name=checkpoint_name, **kwds)
 
-    def info(self, message: str, *args: Any, checkpoint_name: Optional[str] = None, **kwds: Any) -> None:
+    def info(self, message: str, *args: Any, checkpoint_name: str | None = None, **kwds: Any) -> None:
         """Log info message with timing information."""
         self.log(logging.INFO, message, *args, checkpoint_name=checkpoint_name, **kwds)
 
-    def warn(self, message: str, *args: Any, checkpoint_name: Optional[str] = None, **kwds: Any) -> None:
+    def warn(self, message: str, *args: Any, checkpoint_name: str | None = None, **kwds: Any) -> None:
         """Log warning message with timing information."""
         self.log(logging.WARNING, message, *args, checkpoint_name=checkpoint_name, **kwds)
 
-    def warning(self, message: str, *args: Any, checkpoint_name: Optional[str] = None, **kwds: Any) -> None:
+    def warning(self, message: str, *args: Any, checkpoint_name: str | None = None, **kwds: Any) -> None:
         """Log warning message with timing information."""
         self.log(logging.WARNING, message, *args, checkpoint_name=checkpoint_name, **kwds)
 
-    def error(self, message: str, *args: Any, checkpoint_name: Optional[str] = None, **kwds: Any) -> None:
+    def error(self, message: str, *args: Any, checkpoint_name: str | None = None, **kwds: Any) -> None:
         """Log error message with timing information."""
         self.log(logging.ERROR, message, *args, checkpoint_name=checkpoint_name, **kwds)
 
@@ -232,10 +232,10 @@ class Profiler:
         with self._lock:
             return list(self._checkpoints.keys())
 
-    def get_summary(self) -> Dict[str, Any]:
+    def get_summary(self) -> dict[str, Any]:
         """Get comprehensive profiler summary."""
         with self._lock:
-            summary: Dict[str, Any] = {
+            summary: dict[str, Any] = {
                 "name": self._name,
                 "total_elapsed_time": self.elapsed_time,
                 "memory_tracking_enabled": self._track_memory,
@@ -252,7 +252,7 @@ class Profiler:
 
             return summary
 
-    def clear_checkpoints(self, name: Optional[str] = None) -> None:
+    def clear_checkpoints(self, name: str | None = None) -> None:
         """Clear checkpoints.
 
         Args:

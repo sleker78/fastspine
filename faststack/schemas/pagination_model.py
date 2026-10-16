@@ -1,8 +1,4 @@
-from typing import Generic, TypeVar
-
 from pydantic import BaseModel, Field
-
-T = TypeVar("T", bound=BaseModel)
 
 
 class PaginationParams(BaseModel):
@@ -12,7 +8,7 @@ class PaginationParams(BaseModel):
     offset: int = Field(default=0, ge=0)
 
 
-class PaginatedData(BaseModel, Generic[T]):
+class PaginatedData[T: BaseModel](BaseModel):
     """Paginated data."""
 
     count: int = Field(default=0, ge=0)

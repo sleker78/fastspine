@@ -1,36 +1,23 @@
 from functools import lru_cache
 
-import redis
-import redis.asyncio as aioredis
+from redis import Redis as SyncRedis
+from redis.asyncio import Redis
 
 from ..settings import get_core_settings
 
 
 @lru_cache
-def get_redis_client() -> redis.StrictRedis:
-    """Get the Redis client.
-
-    Returns:
-        redis.StrictRedis: The Redis client instance.
-    """
+def get_redis_client() -> Redis | None:
+    """Get the Redis client instance."""
     if get_core_settings().CACHE_ENABLED:
-        return redis.StrictRedis.from_url(get_core_settings().CELERY_BROKER_URI)
+        return Redis.from_url(get_core_settings().CELERY_BROKER_URI)
 
-    raise RuntimeError(
-        "Redis client is not initialized. Ensure CACHE_ENABLED is set to True and CELERY_BROKER_URI is configured correctly."
-    )
+    return None
 
 
 @lru_cache
-def get_async_redis_client() -> aioredis.Redis:
-    """Get the async Redis client.
-
-    Returns:
-        aioredis.Redis: The async Redis client instance.
-    """
+def get_sync_redis_client() -> SyncRedis | None:
+    """Get the synchronous Redis client instance."""
     if get_core_settings().CACHE_ENABLED:
-        return aioredis.from_url(get_core_settings().CELERY_BROKER_URI)
-
-    raise RuntimeError(
-        "Async Redis client is not initialized. Ensure CACHE_ENABLED is set to True and CELERY_BROKER_URI is configured correctly."
-    )
+        return SyncRedis.from_url(get_core_settings().CELERY_BROKER_URI)
+    return None

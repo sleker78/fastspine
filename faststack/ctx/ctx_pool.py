@@ -8,7 +8,7 @@ class CtxPool:
     def __init__(self):
         self._vars: dict[str, tuple[ContextVar, bool]] = {}  # map: name -> (ContextVar, persistent: bool)
 
-    def new(self, name: str, default: Any = None, persistant: bool = False):
+    def new(self, name: str, default: Any = None, persistant: bool = False) -> ContextVar:
         """Create a new context variable with the given name and default value."""
         var = ContextVar(name, default=default)
         self._vars[name] = (var, persistant)
@@ -31,7 +31,7 @@ class CtxPool:
         else:
             raise KeyError(f"Context variable '{name}' not found in the pool.")
 
-    def get(self, name: str, default: Any = None):
+    def get(self, name: str, default: Any = None) -> Any:
         """Get the value of a context variable by name."""
         if name in self._vars:
             var, _ = self._vars[name]
@@ -41,11 +41,16 @@ class CtxPool:
 
         return default
 
-    def set(self, name: str, value):
+    def set(self, name: str, value: Any, create: bool = True) -> Any:
         """Set the value of a context variable by name."""
         if name in self._vars:
             var, _ = self._vars[name]
             var.set(value)
+            return value
+        if create:
+            var = self.new(name, default=value)
+            var.set(value)
+            self._vars[name] = (var, False)
             return value
 
         raise KeyError(f"Context variable '{name}' not found in the pool.")

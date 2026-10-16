@@ -1,12 +1,10 @@
 import asyncio
 import logging
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Type, TypeVar, Union
+from typing import Any
 
 import httpx
 from pydantic import BaseModel, ValidationError
-
-T = TypeVar("T", bound=BaseModel)
 
 
 class APIAuthConfig(BaseModel):
@@ -48,13 +46,13 @@ class BasicAuthConfig(APIAuthConfig):
 class CustomAuthConfig(APIAuthConfig):
     """Custom headers authentication."""
 
-    headers: Dict[str, str]
+    headers: dict[str, str]
 
 
 class APIError(Exception):
     """Base API error."""
 
-    def __init__(self, message: str, status_code: int | None = None, response_data: Dict | None = None):
+    def __init__(self, message: str, status_code: int | None = None, response_data: dict | None = None):
         self.message = message
         self.status_code = status_code
         self.response_data = response_data
@@ -105,7 +103,7 @@ class AbstractAPIService(ABC):
             self._client = httpx.AsyncClient(timeout=self.timeout, headers=headers)
         return self._client
 
-    def _build_auth_headers(self) -> Dict[str, str]:
+    def _build_auth_headers(self) -> dict[str, str]:
         """Build authentication headers based on auth config."""
         headers = {}
 
@@ -131,7 +129,7 @@ class AbstractAPIService(ABC):
         return headers
 
     @abstractmethod
-    def _get_default_headers(self) -> Dict[str, str]:
+    def _get_default_headers(self) -> dict[str, str]:
         """Override to provide service-specific default headers."""
         return {"Content-Type": "application/json", "Accept": "application/json"}
 
@@ -143,9 +141,9 @@ class AbstractAPIService(ABC):
         self,
         method: str,
         endpoint: str,
-        data: Dict[str, Any] | None = None,
-        params: Dict[str, Any] | None = None,
-        headers: Dict[str, str] | None = None,
+        data: dict[str, Any] | None = None,
+        params: dict[str, Any] | None = None,
+        headers: dict[str, str] | None = None,
     ) -> httpx.Response:
         """Make HTTP request with retry logic."""
         url = self._build_url(endpoint)
@@ -181,7 +179,7 @@ class AbstractAPIService(ABC):
 
         return httpx.Response(status_code=500)  # Fallback, should not reach here
 
-    def _parse_response(self, response: httpx.Response, model_class: Type[T]) -> T:
+    def _parse_response[T: BaseModel](self, response: httpx.Response, model_class: type[T]) -> T:
         """Parse HTTP response to Pydantic model."""
         try:
             # Check for HTTP errors
@@ -211,9 +209,9 @@ class AbstractAPIService(ABC):
         except Exception as e:
             raise APIError(f"Response parsing failed: {str(e)}") from e
 
-    async def _get(
-        self, endpoint: str, params: Dict | None = None, response_model: Type[T] | None = None
-    ) -> Union[Dict, T]:
+    async def _get[T: BaseModel](
+        self, endpoint: str, params: dict | None = None, response_model: type[T] | None = None
+    ) -> dict | T:
         """Make GET request."""
         response = await self._make_request("GET", endpoint, params=params)
 
@@ -223,9 +221,9 @@ class AbstractAPIService(ABC):
         response.raise_for_status()
         return response.json()
 
-    async def _post(
-        self, endpoint: str, data: Dict | None = None, response_model: Type[T] | None = None
-    ) -> Union[Dict, T]:
+    async def _post[T: BaseModel](
+        self, endpoint: str, data: dict | None = None, response_model: type[T] | None = None
+    ) -> dict | T:
         """Make POST request."""
         response = await self._make_request("POST", endpoint, data=data)
 
@@ -235,20 +233,20 @@ class AbstractAPIService(ABC):
         response.raise_for_status()
         return response.json()
 
-    async def _post_model(
+    async def _post_model[T: BaseModel](
         self,
         endpoint: str,
-        response_model: Type[T],
-        data: Dict[str, Any] | None = None,
+        response_model: type[T],
+        data: dict[str, Any] | None = None,
     ) -> T:
         """Make POST request."""
         response = await self._make_request("POST", endpoint, data=data)
 
         return self._parse_response(response, response_model)
 
-    async def _put(
-        self, endpoint: str, data: Dict | None = None, response_model: Type[T] | None = None
-    ) -> Union[Dict, T]:
+    async def _put[T: BaseModel](
+        self, endpoint: str, data: dict | None = None, response_model: type[T] | None = None
+    ) -> dict | T:
         """Make PUT request."""
         response = await self._make_request("PUT", endpoint, data=data)
 
@@ -258,7 +256,7 @@ class AbstractAPIService(ABC):
         response.raise_for_status()
         return response.json()
 
-    async def _delete(self, endpoint: str, response_model: Type[T] | None = None) -> Union[Dict, T, None]:
+    async def _delete[T: BaseModel](self, endpoint: str, response_model: type[T] | None = None) -> dict | T | None:
         """Make DELETE request."""
         response = await self._make_request("DELETE", endpoint)
 

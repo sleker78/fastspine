@@ -1,5 +1,4 @@
-import contextvars
-from typing import Callable, Type, TypeVar, Union
+from typing import Callable
 
 from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -11,10 +10,8 @@ from ..ctx.ctx_pool import ctxpool
 from ..dependencies.database import DB_MAPPING, DB_SESSION_MAPPING
 from ..dependencies.profiler import fetch_profiler, load_profiler
 from ..repositories.abstract_repository import AbstractRepository
+from ..types import DBSessions
 from ..util.class_util import get_annotations
-
-REPO_T = TypeVar("REPO_T", bound=AbstractRepository)
-_repo_cache_var: contextvars.ContextVar[dict] = ctxpool.new("_repo_cache_var", default={})
 
 
 def clear_cache():
@@ -22,7 +19,7 @@ def clear_cache():
     ctxpool.clear_one("_repo_cache_var")
 
 
-def get_repository(repo_class: Type[REPO_T]) -> Callable[[], REPO_T]:
+def get_repository[REPO_T: AbstractRepository](repo_class: type[REPO_T]) -> Callable[[], REPO_T]:
     """Get repo instance. Used for DI inside Fastapi Depends lifecycle."""
     annotations = get_annotations(repo_class, mandatory_params=["db"])
 
@@ -54,7 +51,7 @@ def get_repository(repo_class: Type[REPO_T]) -> Callable[[], REPO_T]:
         )
 
     def factory(
-        db: Union[Session, AsyncSession] = Depends(session_func_name),
+        db: DBSessions = Depends(session_func_name),
     ) -> REPO_T:
         """Factory function to create the repository instance."""
         dependencies = {}
@@ -71,15 +68,14 @@ def get_repository(repo_class: Type[REPO_T]) -> Callable[[], REPO_T]:
     return factory
 
 
-def load_repository(repo_class: Type[REPO_T]) -> REPO_T:
+def load_repository[REPO_T: AbstractRepository](repo_class: type[REPO_T]) -> REPO_T:
     """Load repository.
 
     load_repository is a utility function designed to create and return an instance of a repository class.
     It is primarily used for dependency injection (DI) in contexts where FastAPI's Depends mechanism
     is not available, such as background tasks or external services like Celery.
     """
-    # cache = _repo_cache_var.get()
-    cache = ctxpool.get("repo_cache", default={})
+    cache = ctxpool.get("_repo_cache_var", default={})
 
     if repo_class in cache:
         return cache[repo_class]
@@ -119,8 +115,3 @@ def load_repository(repo_class: Type[REPO_T]) -> REPO_T:
     ctxpool.set("_repo_cache_var", new_cache)
 
     return repo_instance
-
-
-def repository_dep(repo_class: Type[REPO_T]) -> REPO_T:
-    """Repository dependency."""
-    return Depends(get_repository(repo_class))

@@ -1,17 +1,8 @@
-from typing import Annotated
-
-from fastapi import Depends, Request
-
 from faststack.lib.profiler import Profiler
 
 from ..ctx.ctx_pool import ctxpool
 
 profiler_ctx = ctxpool.new("profiler_ctx", default=None)
-
-
-def get_profiler(request: Request):
-    """Load the Profiler instance with Depends."""
-    return request.state.profiler
 
 
 def load_profiler() -> Profiler:
@@ -31,7 +22,4 @@ def load_profiler() -> Profiler:
 
 def fetch_profiler():
     """Fetch the Profiler instance inside Depends."""
-    return ctxpool.get("request_context").state.profiler
-
-
-ProfilerDep = Annotated[Profiler, Depends(get_profiler)]
+    return load_profiler()

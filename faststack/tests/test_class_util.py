@@ -25,11 +25,14 @@ class DummyMissingAnn:
     def __init__(self, a, b: str):
         pass
 
+
 class DummyMissingParam:
     """Dummy class with a missing annotation for testing."""
 
     def __init__(self, b: str):
         pass
+
+
 class Model(BaseModel):
     """Pydantic model for testing mapping."""
 

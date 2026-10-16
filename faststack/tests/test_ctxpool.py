@@ -59,4 +59,4 @@ def test_clear_one_not_found_raises(pool):
 def test_set_not_found_raises(pool):
     """Test that setting a value for a non-existent context variable raises an error."""
     with pytest.raises(KeyError):
-        pool.set("missing", 123)
+        pool.set("missing", 123, create=False)

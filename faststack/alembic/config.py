@@ -1,6 +1,7 @@
 from faststack.database.engine import DBConfig
 from pydantic import SecretStr
 
+
 def _get_url(settings: DBConfig | None, service:str = 'postgres') -> str:
     """Return the database URL from the config object."""
     if settings is None:
@@ -36,3 +37,4 @@ def _create_db_engine(user, password, host, port, db_name, service: str = "postg
         + "/"
         + db_name
     )
+

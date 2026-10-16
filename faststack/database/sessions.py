@@ -1,4 +1,4 @@
-from typing import Type, TypeVar, Union, cast
+from typing import Type, TypeVar, cast
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from ..ctx.ctx_pool import ctxpool
 from ..util.debug_util import DebugUtil
 
-SESSION_T = TypeVar("SESSION_T", bound=Union[Session, AsyncSession])
+SESSION_T = TypeVar("SESSION_T", bound=Session | AsyncSession)
 SESSION_CTX_NAME = "session_connection_pool"
 
 session_connection_pool = ctxpool.new(SESSION_CTX_NAME, default=None)
@@ -18,7 +18,7 @@ class SessionConnectionPool:
     def __init__(self):
         self.pool = {}
 
-    def _key_name(self, key: Union[Type[SESSION_T], SESSION_T]) -> str:
+    def _key_name(self, key: Type[SESSION_T] | SESSION_T) -> str:
         if not isinstance(key, type):
             return key.__class__.__name__
         return key.__name__
@@ -30,7 +30,7 @@ class SessionConnectionPool:
     def _clear_ctx(self):
         ctxpool.clear_one("session_connection_pool")
 
-    def get(self, key: Union[Type[SESSION_T], SESSION_T]) -> SESSION_T:
+    def get(self, key: Type[SESSION_T] | SESSION_T) -> SESSION_T:
         """Get the session from the pool."""
         return cast(SESSION_T, self.pool.get(self._key_name(key), None))
 
@@ -41,7 +41,7 @@ class SessionConnectionPool:
         self.pool[self._key_name(value)] = value
         self._refresh()
 
-    def delete(self, key: Union[Type[SESSION_T], SESSION_T]):
+    def delete(self, key: Type[SESSION_T] | SESSION_T):
         """Delete the session from the pool."""
         key_name = self._key_name(key)
         if key_name not in self.pool:
@@ -51,7 +51,7 @@ class SessionConnectionPool:
         del self.pool[key_name]
         self._refresh()
 
-    async def adelete(self, key: Union[Type[SESSION_T], SESSION_T]):
+    async def adelete(self, key: Type[SESSION_T] | SESSION_T):
         """Async delete the session from the pool."""
         key_name = self._key_name(key)
         if key_name not in self.pool:

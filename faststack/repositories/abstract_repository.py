@@ -1,17 +1,17 @@
 import re
 from abc import ABC
-from typing import Any, Dict, Type, Union
+from typing import Any
 
 import pandas as pd
 import polars as pl
 from pydantic import BaseModel
 from sqlalchemy import text
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import Session
+from sqlalchemy.sql.elements import TextClause
+from sqlalchemy.sql.expression import Selectable
 
-from faststack.lib.profiler import Profiler
-
+from ..lib.profiler import Profiler
 from ..schemas.pagination_model import PaginatedData, PaginatedList, PaginationParams
+from ..types import DBSessions
 from ..util.dataframe_util import map_data_to_model
 
 
@@ -21,7 +21,7 @@ class AbstractRepository(ABC):  # noqa: B024
     This class provides a common interface for all repository classes for externale db.
     """
 
-    def __init__(self, db: Union[Session, AsyncSession], profiler: Profiler):
+    def __init__(self, db: DBSessions, profiler: Profiler):
         self.db = db
         self.profiler = profiler
 
@@ -29,22 +29,22 @@ class AbstractRepository(ABC):  # noqa: B024
         """Returns the LIMIT and OFFSET clause for a SQL query."""
         return f" LIMIT {pagination.limit} OFFSET {pagination.offset}"
 
-    def _only_select_validation(self, query: str) -> None:
+    def _only_select_validation(self, query: str | TextClause | Selectable) -> None:
         """Validates that the query is a SELECT query."""
-        cleaned_query = query.strip().lower()
-        contains_with = re.match(r"^\s*with\b", cleaned_query)
+        if isinstance(query, str):
+            cleaned_query = query.strip().lower()
+            contains_with = re.match(r"^\s*with\b", cleaned_query)
 
-        starts_with_select = re.match(r"^\(*\s*select\b", cleaned_query)
-        contains_union = " union " in cleaned_query
+            starts_with_select = re.match(r"^\(*\s*select\b", cleaned_query)
+            contains_union = " union " in cleaned_query
+            if not (starts_with_select or contains_union or contains_with):
+                raise ValueError("Only SELECT or UNION or WITH queries are allowed for fetching data.")
 
-        if not (starts_with_select or contains_union or contains_with):
-            raise ValueError("Only SELECT or UNION or WITH queries are allowed for fetching data.")
-
-    def fetch_paginated(
+    def sync_fetch_paginated(
         self,
         query: str,
         pagination: PaginationParams,
-        params: Dict[str, Any] | None = None,
+        params: dict[str, Any] | None = None,
     ) -> PaginatedList:
         """Executes a native SQL query and returns the result as PaginatedList."""
         self._only_select_validation(query)
@@ -63,11 +63,11 @@ class AbstractRepository(ABC):  # noqa: B024
 
         return PaginatedList(count=total_count, rows=results)
 
-    async def afetch_paginated(
+    async def fetch_paginated(
         self,
         query: str,
         pagination: PaginationParams,
-        params: Dict[str, Any] | None = None,
+        params: dict[str, Any] | None = None,
     ) -> PaginatedList:
         """Executes a native SQL query and returns the result as PaginatedList (async version)."""
         self._only_select_validation(query)
@@ -87,13 +87,13 @@ class AbstractRepository(ABC):  # noqa: B024
 
         return PaginatedList(count=total_count, rows=results)
 
-    def fetch_dataframe(
+    def sync_fetch_dataframe(
         self,
         query: str,
-        params: Dict[str, Any] | None = None,
+        params: dict[str, Any] | None = None,
         pagination: PaginationParams | None = None,
-        model: Type[BaseModel] | None = None,
-        response_model: Type[PaginatedData] | None = None,
+        model: type[BaseModel] | None = None,
+        response_model: type[PaginatedData] | None = None,
     ) -> PaginatedData:
         """Executes a native SQL query and returns the result as PaginatedList."""
         self._only_select_validation(query)
@@ -117,13 +117,13 @@ class AbstractRepository(ABC):  # noqa: B024
 
         return response_model(data=data, count=total_count)
 
-    async def afetch_dataframe(
+    async def fetch_dataframe(
         self,
         query: str,
-        params: Dict[str, Any] | None = None,
+        params: dict[str, Any] | None = None,
         pagination: PaginationParams | None = None,
-        model: Type[BaseModel] | None = None,
-        response_model: Type[PaginatedData] | None = None,
+        model: type[BaseModel] | None = None,
+        response_model: type[PaginatedData] | None = None,
     ) -> PaginatedData:
         """Executes a native SQL query and returns the result as PaginatedList (async version)."""
         self._only_select_validation(query)
@@ -147,7 +147,7 @@ class AbstractRepository(ABC):  # noqa: B024
 
         return response_model(data=data, count=total_count)
 
-    def fetch_list(self, query: str, params: Dict[str, Any] | None = None) -> list[Dict[str, Any]]:
+    def sync_fetch_list(self, query: str, params: dict[str, Any] | None = None) -> list[dict[str, Any]]:
         """Executes a native SQL query and returns the result as a list of models or dicts."""
         self._only_select_validation(query)
         if params is None:
@@ -155,20 +155,20 @@ class AbstractRepository(ABC):  # noqa: B024
         results = self.db.execute(query, params).mappings().all()
         return [dict(row) for row in results]
 
-    async def afetch_list(self, query: str, params: Dict[str, Any] | None = None) -> list[Dict[str, Any]]:
-        """Executes a native SQL query and returns the result as a list of models or dicts (async version)."""
+    async def fetch_list(self, query: str, params: dict[str, Any] | None = None) -> list[dict[str, Any]]:
+        """Executes a native SQL query and returns the result as a list of models or dicts."""
         self._only_select_validation(query)
         if params is None:
             params = {}
-        results = await self.db.execute(query, params)
-        results = results.mappings().all()
+        result = await self.db.execute(text(query), params)
+        results = result.mappings().all()
         return [dict(row) for row in results]
 
-    def fetchone(
+    def sync_fetchone(
         self,
         query: str,
-        params: Dict[str, Any] | None = None,
-        model: Type[BaseModel] | None = None,
+        params: dict[str, Any] | None = None,
+        model: type[BaseModel] | None = None,
         dataframe: bool = False,
     ) -> Any:
         """Executes a native SQL query and returns the first row of the result."""
@@ -185,34 +185,32 @@ class AbstractRepository(ABC):  # noqa: B024
 
         return res
 
-    async def afetchone(
+    async def fetchone(
         self,
         query: str,
-        params: Dict[str, Any] | None = None,
-        model: Type[BaseModel] | None = None,
-        dataframe: bool = False,
+        params: dict[str, Any] | None = None,
+        model: type[BaseModel] | None = None,
     ) -> Any:
-        """Executes a native SQL query and returns the first row of the result (async version)."""
+        """Executes a native SQL query and returns the first row of the result."""
         self._only_select_validation(query)
-        query = text(query)
+        query_stmt = text(query)
         if params is None:
             params = {}
-        res = await self.db.execute(query, params)
-        res = res.fetchone()
-        if dataframe:
-            return pd.DataFrame([dict(res)], columns=res.keys())
+
+        result = await self.db.execute(query_stmt, params)
+        res = result.mappings().fetchone()
 
         if model is not None and res is not None:
             return model(**dict(res))
 
         return res
 
-    def execute_df_query(
+    def sync_execute_df_query(
         self,
         query: str,
-        params: Dict[str, Any] | None = None,
-        return_type: Type[Union[pd.DataFrame, pl.DataFrame]] = pd,
-    ) -> Union[pd.DataFrame, pl.DataFrame]:
+        params: dict[str, Any] | None = None,
+        return_type: type[pd.DataFrame | pl.DataFrame] = pd,
+    ) -> pd.DataFrame | pl.DataFrame:
         """Executes a native SQL query and returns the result as a pandas or polars DataFrame."""
         self._only_select_validation(query)
         if params is None:
@@ -226,12 +224,12 @@ class AbstractRepository(ABC):  # noqa: B024
 
         return pd.DataFrame(data, columns=columns)
 
-    async def aexecute_df_query(
+    async def execute_df_query(
         self,
         query: str,
-        params: Dict[str, Any] | None = None,
-        return_type: Type[Union[pd.DataFrame, pl.DataFrame]] = pd,
-    ) -> Union[pd.DataFrame, pl.DataFrame]:
+        params: dict[str, Any] | None = None,
+        return_type: type[pd.DataFrame | pl.DataFrame] = pd,
+    ) -> pd.DataFrame | pl.DataFrame:
         """Executes a native SQL query and returns the result as a pandas or polars DataFrame (async version)."""
         self._only_select_validation(query)
         if params is None:
