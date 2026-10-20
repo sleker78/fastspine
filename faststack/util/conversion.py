@@ -1,7 +1,5 @@
 import math
-from typing import Iterable, TypeVar
-
-T = TypeVar("T")
+from typing import Iterable
 
 
 def convert_nan_to_none(v):
@@ -11,7 +9,7 @@ def convert_nan_to_none(v):
     return v
 
 
-def to_list(value: Iterable[T] | None) -> list[T]:
+def to_list[T](value: Iterable[T] | None) -> list[T]:
     """Convert an iterable to a list, or return an empty list if None.
 
     Args:
@@ -25,7 +23,7 @@ def to_list(value: Iterable[T] | None) -> list[T]:
     return list(value)
 
 
-def to_set(value: Iterable[T] | None) -> set[T]:
+def to_set[T](value: Iterable[T] | None) -> set[T]:
     """Convert an iterable to a set, or return an empty set if None.
 
     Args:

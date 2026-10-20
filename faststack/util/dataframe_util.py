@@ -1,4 +1,4 @@
-from typing import Any, Type
+from typing import Any
 
 import pandas as pd
 from pydantic import BaseModel
@@ -21,7 +21,7 @@ def convert_to_df(results: Any) -> pd.DataFrame:
     raise ValueError("Unsupported result format for DataFrame conversion.")
 
 
-def map_data_to_model(df: pd.DataFrame, model: Type[BaseModel]) -> list[BaseModel]:
+def map_data_to_model(df: pd.DataFrame, model: type[BaseModel]) -> list[BaseModel]:
     """Converts a pandas DataFrame to a list of Pydantic models.
 
     NaN values are replaced with None before instantiating the models.

@@ -1,5 +1,5 @@
 from abc import ABC
-from typing import Type, final
+from typing import final
 
 from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -35,11 +35,11 @@ class BaseRepository[T: BaseModel](AbstractRepository, ABC):
         self.model = self.get_model()
 
     @final
-    def get_model(self) -> Type[T]:
+    def get_model(self) -> type[T]:
         """Get the model class associated with this repository.
 
         Returns:
-            Type[T]: The model class associated with this repository.
+            type[T]: The model class associated with this repository.
 
         Raises:
             ValueError: If the repository does not inherit with a model type parameter.
@@ -64,7 +64,7 @@ class BaseRepository[T: BaseModel](AbstractRepository, ABC):
         if issubclass(self.model, SoftDeleteMixin):
             return (
                 self.db.query(self.model)
-                .filter(self.model.id == instance_id, self.model.deleted_at.is_(None))
+                .filter(self.model.id == instance_id, self.model.deleted_at.is_(None))  # type: ignore[attr-defined]
                 .one_or_none()
             )
         return self.db.query(self.model).filter(self.model.id == instance_id).one_or_none()
@@ -145,7 +145,7 @@ class BaseRepository[T: BaseModel](AbstractRepository, ABC):
         if not issubclass(self.model, SoftDeleteMixin):
             raise TypeError(f"{self.model.__name__} does not support bulk soft deletion.")
 
-        instances = self.db.query(self.model).filter(self.model.id.in_(ids)).all()
+        instances = self.db.query(self.model).filter(self.model.id.in_(ids)).all()  # type: ignore[attr-defined]
         for instance in instances:
             instance.set_deleted()
             self.db.add(instance)
@@ -268,7 +268,7 @@ class BaseRepository[T: BaseModel](AbstractRepository, ABC):
 
         if issubclass(self.model, SoftDeleteMixin):
             result = await self.db.execute(
-                select(self.model).filter(self.model.id == instance_id, self.model.deleted_at.is_(None))
+                select(self.model).filter(self.model.id == instance_id, self.model.deleted_at.is_(None))  # type: ignore[attr-defined]
             )
             return result.scalar_one_or_none()
 
@@ -318,7 +318,7 @@ class BaseRepository[T: BaseModel](AbstractRepository, ABC):
         if not issubclass(self.model, SoftDeleteMixin):
             raise TypeError(f"{self.model.__name__} does not support bulk soft deletion.")
 
-        result = await self.db.execute(select(self.model).filter(self.model.id.in_(ids)))
+        result = await self.db.execute(select(self.model).filter(self.model.id.in_(ids)))  # type: ignore[attr-defined]
         instances = result.scalars().all()
         for instance in instances:
             instance.set_deleted()

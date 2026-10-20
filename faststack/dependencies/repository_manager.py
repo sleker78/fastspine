@@ -12,6 +12,7 @@ from ..repositories.repository_manager import RepositoryManager
 _repo_manager_cache_var: contextvars.ContextVar[dict] = ctxpool.new("_repo_manager_cache_var", default={})
 
 manager_annotations_classes: dict[type[Any], dict[str, Any]] = {}
+_factory_cache: dict[tuple[type, bool], Callable] = {}
 
 
 def clear_repository_manager_cache():
@@ -64,6 +65,9 @@ def get_repository_manager[REPO_MANAGER_T: RepositoryManager](
     repo_manager_class: type[REPO_MANAGER_T], isolated_session: bool = False
 ) -> Callable[[], REPO_MANAGER_T]:
     """Get repo instance. Used for DI inside Fastapi Depends lifecycle."""
+    key = (repo_manager_class, isolated_session)
+    if key in _factory_cache:
+        return _factory_cache[key]
     annotations = _read_manager_annotations(repo_manager_class)
     session_class = annotations.get("db") if annotations else None
 
@@ -106,10 +110,13 @@ def get_repository_manager[REPO_MANAGER_T: RepositoryManager](
                 dependencies[param_name] = db
         return repo_manager_class(**dependencies)
 
+    _factory_cache[key] = factory
     return factory
 
 
-def load_repository_manager[REPO_MANAGER_T](repo_manager_class: type[REPO_MANAGER_T]) -> REPO_MANAGER_T:
+def load_repository_manager[REPO_MANAGER_T: RepositoryManager](
+    repo_manager_class: type[REPO_MANAGER_T],
+) -> REPO_MANAGER_T:
     """Load repository manager.
 
     load_repository manager is a utility function designed to create and return an instance of a repository manager class.

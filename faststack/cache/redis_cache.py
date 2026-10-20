@@ -1,6 +1,6 @@
 import gzip
 import json
-from typing import Any, Callable, Type, TypeVar
+from typing import Any, Callable, TypeVar
 
 from redis.exceptions import RedisError
 from redis.typing import ResponseT
@@ -63,24 +63,41 @@ async def cache_delete(key: str) -> bool:
         raise CacheError(f"Cache delete failed: {e!s}") from e
 
 
-def sync_cache_get(key: str, decoder: Type[Encoder] = PickledEncoder) -> Any | None:
+def sync_cache_get(key: str, decoder: type[Encoder] = PickledEncoder, use_compression: bool = False) -> Any | None:
     """Retrieve a value from Redis cache by key."""
     try:
         client = get_sync_redis_client()
+        if client is None:
+            return None
         cached = client.get(key)
-        return decoder.decode(cached) if cached else None
+        if cached:
+            if use_compression:
+                decompressed = gzip.decompress(cached)
+                return decoder.decode(decompressed)
+            return decoder.decode(cached)
+        return None
 
     except (RedisError, json.JSONDecodeError) as e:
         raise CacheError(f"Cache get failed: {str(e)}") from e
 
 
-def sync_cache_set(key: str, value: Any, expire: int = 60, encoder: Type[Encoder] = PickledEncoder) -> ResponseT | bool:
+def sync_cache_set(
+    key: str,
+    value: Any,
+    expire: int = 60,
+    encoder: type[Encoder] = PickledEncoder,
+    use_compression: bool = False,
+) -> ResponseT | bool:
     """Set a value in Redis cache with an optional expiration time."""
     try:
         # do not cache None values
         if value is not None:
             client = get_sync_redis_client()
+            if client is None:
+                return False
             serialized = encoder.encode(value)
+            if use_compression:
+                serialized = gzip.compress(serialized)
 
             if expire > 0:
                 return client.setex(key, expire, serialized)
@@ -94,6 +111,8 @@ def sync_cache_delete(key: str) -> ResponseT:
     """Delete a key from Redis cache."""
     try:
         client = get_sync_redis_client()
+        if client is None:
+            return 0
         return client.delete(key)
     except RedisError as e:
         raise CacheError(f"Cache delete failed: {str(e)}") from e

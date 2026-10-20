@@ -34,12 +34,19 @@ class Profiler:
     - Named operation tracking
     """
 
-    def __init__(self, name: str = "default", track_memory: bool = False) -> None:
+    def __init__(
+        self,
+        name: str | None = "default",
+        track_memory: bool | None = False,
+        enabled: bool | None = False,
+        level: int | None = logging.INFO,
+    ) -> None:
         """Initialize profiler with current timestamp.
 
         Args:
             name: Name of this profiler instance
             track_memory: Whether to track memory usage
+            enabled: Whether the profiler is enabled
         """
         self._name = name
         self._track_memory = track_memory
@@ -49,6 +56,8 @@ class Profiler:
         self._lock = threading.RLock()
         self._process = psutil.Process(os.getpid()) if track_memory else None
         self._start_memory = self._get_memory_usage() if track_memory else 0.0
+        self._enabled = enabled
+        self._level_ = level
 
     def _get_memory_usage(self) -> float:
         """Get current memory usage in MB."""
@@ -160,6 +169,8 @@ class Profiler:
             checkpoint_name: Optional checkpoint name to record metrics
             **kwds: Additional keyword arguments for logger
         """
+        if not self._enabled:
+            return
         with self._lock:
             elapsed, timed_message = self.stamp(message, checkpoint_name)
             time_delta = elapsed - self._last_timestamp
@@ -213,7 +224,7 @@ class Profiler:
         return time.time() - self._start_time
 
     @property
-    def name(self) -> str:
+    def name(self) -> str | None:
         """Get profiler name."""
         return self._name
 

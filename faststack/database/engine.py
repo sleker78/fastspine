@@ -117,7 +117,7 @@ class DBConfig(BaseModel):
         return create_async_engine(self.connection_url(), pool_pre_ping=True)
 
     @staticmethod
-    def init_engine(config: dict | "DBConfig") -> DBEngines:
+    def init_engine(config: "dict | DBConfig") -> DBEngines:
         """Initialize the database engine based on the provided configuration."""
         db_config = DBConfig.get_db_config(config)
         if db_config.async_mode:

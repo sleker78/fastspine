@@ -2,7 +2,12 @@
   "permissions": {
     "allow": [
       "Bash(python3 -c ' *)",
-      "Bash(.venv/bin/mypy faststack/cache/cache_decorater.py)"
+      "Bash(.venv/bin/mypy faststack/cache/cache_decorater.py)",
+      "Bash(mkdir -p faststack/settings_new && echo ok)",
+      "Bash(uv run *)"
+    ],
+    "additionalDirectories": [
+      "/home/pavlovic/projects/faststack/faststack"
     ]
   }
 }

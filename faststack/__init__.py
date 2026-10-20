@@ -1,5 +1,5 @@
 from .abstract.owner_base import OwnerBase
-from .boostrap import run_fast_core_app
+from .boostrap import FastStackApp, run_fast_core_app
 from .celery.base_task import BaseTask
 from .dependencies.profiler import load_profiler
 from .dependencies.repositories import (
@@ -46,4 +46,5 @@ __all__ = [
     "ActionNotAllowedError",
     "NotFoundError",
     "SecurityAlertError",
+    "FastStackApp",
 ]

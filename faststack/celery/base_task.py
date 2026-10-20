@@ -28,8 +28,9 @@ class BaseTask(Task):
 
     def _cache_task_id(self, task_key):
         """Store the task ID in Redis to mark the task as already executed."""
-        if get_redis_client():
-            return get_redis_client().set(task_key, "exists", nx=True)  # No expiration time set
+        redis_client = get_redis_client()
+        if redis_client is not None:
+            return redis_client.set(task_key, "exists", nx=True)  # No expiration time set
 
         return None
 
@@ -48,7 +49,9 @@ class BaseTask(Task):
         try:
             return super().apply_async(args, kwargs, *other_args, **other_kwargs)
         except Exception:
-            get_redis_client().delete(task_key)
+            redis_client = get_redis_client()
+            if redis_client is not None:
+                redis_client.delete(task_key)
             raise
 
     @staticmethod
@@ -72,9 +75,10 @@ class BaseTask(Task):
             DebugUtil.debug(f"Task {sender.name} completed with task ID: {task_id}")
             if task_id is not None:
                 task_key = BaseTask.generate_unique_task_id(sender.name, args, kwargs)
-            if get_redis_client():
+            redis_client = get_redis_client()
+            if redis_client is not None:
                 DebugUtil.debug(f"Deleting task key {task_key} from Redis.")
-                get_redis_client().delete(task_key)
+                redis_client.delete(task_key)
         DebugUtil.debug(f"{SessionConnectionPool.__name__} stopping.")
         SessionConnectionPool.stop()
         BaseTask._clear_cache()

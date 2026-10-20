@@ -1,4 +1,4 @@
-from typing import cast
+from typing import Any, cast
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
@@ -80,7 +80,7 @@ class RepositoryManager[SESSION_T: DBSessions]:
         is not available, such as background tasks or external services like Celery.
         """
         annotations = get_annotations(repo_class, mandatory_params=["db", "profiler"])
-        dependencies = {}
+        dependencies: dict[str, Any] = {}
 
         for param_name, param_type in annotations.items():
             if (isinstance(param_type, type) and issubclass(param_type, (Session, AsyncSession))) or (

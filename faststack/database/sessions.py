@@ -1,4 +1,4 @@
-from typing import Type, TypeVar, cast
+from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
@@ -6,21 +6,22 @@ from sqlalchemy.orm import Session
 from ..ctx.ctx_pool import ctxpool
 from ..util.debug_util import DebugUtil
 
-SESSION_T = TypeVar("SESSION_T", bound=Session | AsyncSession)
 SESSION_CTX_NAME = "session_connection_pool"
 
 session_connection_pool = ctxpool.new(SESSION_CTX_NAME, default=None)
 
 
 class SessionConnectionPool:
-    """Session connection pool."""
+    """Session connection pool.
+
+    Pooled sessions are keyed by an owner key (e.g. a `RepositoryManager` subclass), not by the
+    session's own class, since several owners may share the same underlying `Session`/`AsyncSession` type.
+    """
 
     def __init__(self):
-        self.pool = {}
+        self.pool: dict[str, Session | AsyncSession] = {}
 
-    def _key_name(self, key: Type[SESSION_T] | SESSION_T) -> str:
-        if not isinstance(key, type):
-            return key.__class__.__name__
+    def _key_name(self, key: type[Any]) -> str:
         return key.__name__
 
     def _refresh(self):
@@ -30,33 +31,34 @@ class SessionConnectionPool:
     def _clear_ctx(self):
         ctxpool.clear_one("session_connection_pool")
 
-    def get(self, key: Type[SESSION_T] | SESSION_T) -> SESSION_T:
+    def get(self, key: type[Any]) -> Session | AsyncSession | None:
         """Get the session from the pool."""
-        return cast(SESSION_T, self.pool.get(self._key_name(key), None))
+        return self.pool.get(self._key_name(key))
 
-    def add(self, value: SESSION_T):
+    def add(self, key: type[Any], value: Session | AsyncSession):
         """Add the session to the pool."""
-        if self.get(self._key_name(value)) is not None:
-            raise ValueError(f"Session {value.__class__.__name__} already exists in the pool.")
-        self.pool[self._key_name(value)] = value
+        key_name = self._key_name(key)
+        if self.pool.get(key_name) is not None:
+            raise ValueError(f"Session for {key_name} already exists in the pool.")
+        self.pool[key_name] = value
         self._refresh()
 
-    def delete(self, key: Type[SESSION_T] | SESSION_T):
+    def delete(self, key: type[Any]):
         """Delete the session from the pool."""
         key_name = self._key_name(key)
         if key_name not in self.pool:
             return  # Session not in pool, nothing to delete
-        session: SESSION_T = self.pool[key_name]
+        session = self.pool[key_name]
         session.close()
         del self.pool[key_name]
         self._refresh()
 
-    async def adelete(self, key: Type[SESSION_T] | SESSION_T):
+    async def adelete(self, key: type[Any]):
         """Async delete the session from the pool."""
         key_name = self._key_name(key)
         if key_name not in self.pool:
             return  # Session not in pool, nothing to delete
-        session: SESSION_T = self.pool[key_name]
+        session = self.pool[key_name]
         if isinstance(session, AsyncSession):
             await session.close()
         else:

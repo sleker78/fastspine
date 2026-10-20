@@ -4,11 +4,10 @@ from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 
-from faststack.lib.profiler import Profiler
-
 from ..ctx.ctx_pool import ctxpool
 from ..dependencies.database import DB_MAPPING, DB_SESSION_MAPPING
 from ..dependencies.profiler import fetch_profiler, load_profiler
+from ..lib.profiler import Profiler
 from ..repositories.abstract_repository import AbstractRepository
 from ..types import DBSessions
 from ..util.class_util import get_annotations
