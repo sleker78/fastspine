@@ -3,7 +3,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.types import ASGIApp, Receive, Scope, Send
 
 from ..ctx.ctx_pool import ctxpool
-from ..database.sessions import SessionConnectionPool
+from ..dependencies.repository_manager import _close_sessions
 
 
 class DBSessionMiddleware(BaseHTTPMiddleware):
@@ -11,10 +11,9 @@ class DBSessionMiddleware(BaseHTTPMiddleware):
 
     async def dispatch(self, request: Request, call_next):
         """Dispatch method for the middleware."""
-        SessionConnectionPool.run()
         response = await call_next(request)  # Process request
 
-        await SessionConnectionPool.astop()
+        await _close_sessions()
         ctxpool.clear()
         return response
 
@@ -32,9 +31,8 @@ class DBSessionMiddlewareASGI:
             await self.app(scope, receive, send)
             return
 
-        SessionConnectionPool.run()
         try:
             await self.app(scope, receive, send)
         finally:
-            await SessionConnectionPool.astop()
+            await _close_sessions()
             ctxpool.clear()

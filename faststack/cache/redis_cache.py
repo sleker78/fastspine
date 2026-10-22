@@ -26,7 +26,7 @@ async def cache_get(key: str, decoder: type[Encoder] = PickledEncoder, use_compr
             return decoder.decode(cached)
         return None
 
-    except (RedisError, json.JSONDecodeError) as e:
+    except (RedisError, json.JSONDecodeError, ValueError) as e:
         raise CacheError(f"Cache get failed: {e!s}") from e
 
 
@@ -77,7 +77,7 @@ def sync_cache_get(key: str, decoder: type[Encoder] = PickledEncoder, use_compre
             return decoder.decode(cached)
         return None
 
-    except (RedisError, json.JSONDecodeError) as e:
+    except (RedisError, json.JSONDecodeError, ValueError) as e:
         raise CacheError(f"Cache get failed: {str(e)}") from e
 
 
@@ -120,7 +120,7 @@ def sync_cache_delete(key: str) -> ResponseT:
 
 def sync_lock(cache_key: str):
     """Context manager to lock Redis operations."""
-    redis_client = get_redis_client()
+    redis_client = get_sync_redis_client()
     if redis_client is None:
         return None
     lock_key = f"lock:{cache_key}"

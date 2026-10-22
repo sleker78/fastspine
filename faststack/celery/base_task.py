@@ -6,7 +6,7 @@ from celery import Task
 from celery.signals import task_failure, task_postrun, task_prerun
 
 from ..ctx.ctx_pool import ctxpool
-from ..database.sessions import SessionConnectionPool
+from ..dependencies.repository_manager import _close_sessions_sync
 from ..redis.client import get_redis_client
 from ..settings import get_core_settings
 from ..util.debug_util import DebugUtil
@@ -66,7 +66,6 @@ class BaseTask(Task):
         """Handle task execution before running."""
         DebugUtil.debug(f"Task {task.name} started with task ID: {task_id}")
         BaseTask._clear_cache()
-        SessionConnectionPool.run()
 
     @task_postrun.connect
     def task_postrun_handler(sender: "BaseTask | None" = None, task_id=None, args=None, kwargs=None, **other_kwargs):
@@ -79,8 +78,8 @@ class BaseTask(Task):
             if redis_client is not None:
                 DebugUtil.debug(f"Deleting task key {task_key} from Redis.")
                 redis_client.delete(task_key)
-        DebugUtil.debug(f"{SessionConnectionPool.__name__} stopping.")
-        SessionConnectionPool.stop()
+        DebugUtil.debug("Closing repository manager sessions opened during the task.")
+        _close_sessions_sync()
         BaseTask._clear_cache()
 
     @task_failure.connect
@@ -102,4 +101,6 @@ class BaseTask(Task):
                 DebugUtil.debug(f"Fallback method {failed_func_name} not defined")
         except Exception as e:
             DebugUtil.debug(f"Fallback handler error: {e}")
+        DebugUtil.debug("Closing repository manager sessions opened during the task.")
+        _close_sessions_sync()
         BaseTask._clear_cache()

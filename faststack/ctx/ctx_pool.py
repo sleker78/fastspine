@@ -1,3 +1,4 @@
+import contextvars
 from contextvars import ContextVar
 from typing import Any
 
@@ -40,6 +41,18 @@ class CtxPool:
                 return value
 
         return default
+
+    def get_context_var_value[K, V](self, context_var: contextvars.ContextVar[dict[K, V] | None]) -> dict[K, V]:
+        """Get the value of a context variable, returning an empty dictionary if it's None."""
+        _ctx_var_name = context_var.name
+        if _ctx_var_name not in self._vars:
+            raise KeyError(f"Context variable '{_ctx_var_name}' not found in the pool.")
+
+        value = context_var.get()
+
+        if value is None:
+            return {}
+        return value
 
     def set(self, name: str, value: Any, create: bool = True) -> Any:
         """Set the value of a context variable by name."""

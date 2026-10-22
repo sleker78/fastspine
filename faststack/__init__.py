@@ -2,10 +2,6 @@ from .abstract.owner_base import OwnerBase
 from .boostrap import FastStackApp, run_fast_core_app
 from .celery.base_task import BaseTask
 from .dependencies.profiler import load_profiler
-from .dependencies.repositories import (
-    get_repository,  # noqa
-    load_repository,
-)
 from .dependencies.repository_manager import get_repository_manager, load_repository_manager
 from .dependencies.services import (
     load_service,
@@ -24,8 +20,6 @@ from .services.base_service import BaseService
 from .settings import get_core_settings
 
 __all__ = [
-    "load_repository",
-    "get_repository",
     "BaseRepository",
     "ExternalBaseRepository",
     "OwnerBase",

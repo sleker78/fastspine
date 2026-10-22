@@ -15,7 +15,7 @@ class RepositoryManager[SESSION_T: DBSessions]:
     """Manages different repositories in the application."""
 
     def __init__(self, db: SESSION_T):
-        self.db = db
+        self.db: SESSION_T = db
         self._repositories: dict[type[AbstractRepository], AbstractRepository] = {}
 
     def get[REPO_T: AbstractRepository](self, repository_class: type[REPO_T]) -> REPO_T:

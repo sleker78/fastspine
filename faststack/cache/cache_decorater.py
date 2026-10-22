@@ -71,6 +71,9 @@ def cache_response(
                 params=params,
             )
             redis_lock = lock(cache_key)
+            if redis_lock is None:
+                return await func(*args, **kwargs)
+
             acquired = False
             try:
                 if request.headers.get("X-Cache-Bypass") == "true":
@@ -78,11 +81,11 @@ def cache_response(
                     await cache_set(cache_key, result, int(expire_seconds), CacheResponseEncoder)
                     return result
 
-                cached = cache_get(cache_key, CacheResponseEncoder)
+                cached = await cache_get(cache_key, CacheResponseEncoder)
 
                 if cached is not None:
                     return cached
-                acquired = redis_lock.acquire(blocking=True, timeout=30)
+                acquired = await redis_lock.acquire(blocking=True, timeout=30)
                 if not acquired:
                     raise RuntimeError("Failed to acquire Redis lock")
                 cached = await cache_get(cache_key, CacheResponseEncoder)
@@ -92,7 +95,7 @@ def cache_response(
                 result = await func(*args, **kwargs)
                 if isinstance(result, Exception):
                     return result  # Return error response without caching
-                cache_set(cache_key, result, int(expire_seconds), CacheResponseEncoder)
+                await cache_set(cache_key, result, int(expire_seconds), CacheResponseEncoder)
                 return result
 
             except CacheError as e:
@@ -101,7 +104,7 @@ def cache_response(
                 return await func(*args, **kwargs)
             finally:
                 if acquired:
-                    redis_lock.release()
+                    await redis_lock.release()
 
         return cast(T, wrapper)
 
@@ -213,6 +216,9 @@ def cache_method(
                 kwargs=kwargs,
             )
             redis_lock = sync_lock(cache_key)
+            if redis_lock is None:
+                return func(*args, **kwargs)
+
             acquired = False
             try:
                 cached = sync_cache_get(cache_key, PickledEncoder, use_compression=use_compression)

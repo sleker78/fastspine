@@ -1,14 +1,12 @@
 import sys
-import uuid
 from collections.abc import Iterable
 from typing import Any, Callable, get_args, get_origin
 
 from sqlalchemy.engine import Engine
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 from sqlalchemy.orm import Session, sessionmaker
 
 from ..database.engine import DBConfig
-from ..database.sessions import SessionConnectionPool
 from ..repositories.repository_manager import RepositoryManager
 
 
@@ -38,8 +36,6 @@ def _init_engine(config: dict | DBConfig) -> Engine | None:
 ENGINE_MAPPING: dict[type[RepositoryManager], Engine] = {}
 
 DB_MAPPING: dict[type[RepositoryManager], Callable[[], Any]] = {}
-
-DB_SESSION_MAPPING: dict[type[RepositoryManager], Callable[[], Any]] = {}
 
 
 def _generic_session_arg(repo_manager_class: type[RepositoryManager]) -> type | None:
@@ -75,54 +71,22 @@ def get_async_sessionmaker(repo_manager_class: type[RepositoryManager]) -> async
     raise ValueError(f"Unknown repository manager class: {repo_manager_class}")
 
 
-def _load_db(repo_manager_class: type[RepositoryManager]):
-    session_connection_pool: SessionConnectionPool = SessionConnectionPool.run()
-    db_session: Session | None = session_connection_pool.get(repo_manager_class)
-    token = None
-    if db_session is None:
-        session_maker = get_sessionmaker(repo_manager_class)
-
-        db_session = session_maker()
-        token = uuid.uuid4()
-        session_connection_pool.add(repo_manager_class, db_session)
-    return db_session, session_connection_pool, token
+def _load_db(repo_manager_class: type[RepositoryManager]) -> Session:
+    session_maker = get_sessionmaker(repo_manager_class)
+    return session_maker()
 
 
-def _aload_db(
-    repo_manager_class: type[RepositoryManager],
-) -> tuple[AsyncSession, SessionConnectionPool, uuid.UUID | None]:
-    session_connection_pool: SessionConnectionPool = SessionConnectionPool.run()
-    db_session: AsyncSession | None = session_connection_pool.get(repo_manager_class)
-    token = None
-    if db_session is None:
-        session_maker = get_async_sessionmaker(repo_manager_class)
-
-        db_session = session_maker()
-        token = uuid.uuid4()
-        session_connection_pool.add(repo_manager_class, db_session)
-    return db_session, session_connection_pool, token
+def _aload_db(repo_manager_class: type[RepositoryManager]) -> AsyncSession:
+    session_maker = get_async_sessionmaker(repo_manager_class)
+    return session_maker()
 
 
-def _close_db(
-    repo_manager_class: type[RepositoryManager],
-    db_session: Session,
-    token: uuid.UUID | None,
-    session_connection_pool: SessionConnectionPool,
-):
-    if token is not None:
-        db_session.close()
-        session_connection_pool.delete(repo_manager_class)
+def _close_db(db_session: Session):
+    db_session.close()
 
 
-async def _aclose_db(
-    repo_manager_class: type[RepositoryManager],
-    db_session: AsyncSession,
-    token: uuid.UUID | None,
-    session_connection_pool: SessionConnectionPool,
-):
-    if token is not None:
-        await db_session.close()
-        await session_connection_pool.adelete(repo_manager_class)
+async def _aclose_db(db_session: AsyncSession):
+    await db_session.close()
 
 
 def register_session(repo_manager_class: type[RepositoryManager], config: Any | DBConfig):
@@ -135,26 +99,18 @@ def register_session(repo_manager_class: type[RepositoryManager], config: Any | 
     ENGINE_MAPPING[repo_manager_class] = engine
 
     get_db_method_name = f"get_{repo_manager_class.__name__.lower()}_db"
-    get_db_session_method_name = f"get_{repo_manager_class.__name__.lower()}_db_session"
 
     def generic_db_method():  # type hint won't be exact here
+        db_session = _load_db(repo_manager_class)
         try:
-            db_session, session_connection_pool, token = _load_db(repo_manager_class)
             yield db_session
         finally:
-            _close_db(repo_manager_class, db_session, token, session_connection_pool)
-
-    def generic_db_session_method():
-        """Get session outside Fastapi lifecycle ie celery tasks."""
-        db_session, session_connection_pool, token = _load_db(repo_manager_class)
-        return db_session
+            _close_db(db_session)
 
     generic_db_method.__name__ = get_db_method_name
-    generic_db_session_method.__name__ = get_db_session_method_name
     current_module = sys.modules[__name__]
 
     setattr(current_module, get_db_method_name, generic_db_method)
-    setattr(current_module, get_db_session_method_name, generic_db_session_method)
 
     if DB_MAPPING.get(repo_manager_class) is not None:
         raise RuntimeError(
@@ -162,13 +118,6 @@ def register_session(repo_manager_class: type[RepositoryManager], config: Any | 
         )
 
     DB_MAPPING[repo_manager_class] = generic_db_method
-
-    if DB_SESSION_MAPPING.get(repo_manager_class) is not None:
-        raise RuntimeError(
-            f"RepositoryManager {repo_manager_class.__name__} is already registered with a database session method."
-        )
-
-    DB_SESSION_MAPPING[repo_manager_class] = generic_db_session_method
 
 
 def register_async_session(repo_manager_class: type[RepositoryManager], config: Any | DBConfig):
@@ -182,26 +131,17 @@ def register_async_session(repo_manager_class: type[RepositoryManager], config: 
 
     get_db_method_name = f"aget_{repo_manager_class.__name__.lower()}_db"
 
-    get_db_session_method_name = f"aget_{repo_manager_class.__name__.lower()}_db_session"
-
     async def generic_async_db_method():
+        db_session = _aload_db(repo_manager_class)
         try:
-            db_session, session_connection_pool, token = _aload_db(repo_manager_class)
             yield db_session
         finally:
-            await _aclose_db(repo_manager_class, db_session, token, session_connection_pool)
-
-    def generic_async_db_session_method():
-        """Get async session outside Fastapi lifecycle ie celery tasks."""
-        db_session, session_connection_pool, token = _aload_db(repo_manager_class)
-        return db_session
+            await _aclose_db(db_session)
 
     generic_async_db_method.__name__ = get_db_method_name
-    generic_async_db_session_method.__name__ = get_db_session_method_name
     current_module = sys.modules[__name__]
 
     setattr(current_module, get_db_method_name, generic_async_db_method)
-    setattr(current_module, get_db_session_method_name, generic_async_db_session_method)
 
     if DB_MAPPING.get(repo_manager_class) is not None:
         raise RuntimeError(
@@ -209,13 +149,6 @@ def register_async_session(repo_manager_class: type[RepositoryManager], config: 
         )
 
     DB_MAPPING[repo_manager_class] = generic_async_db_method
-
-    if DB_SESSION_MAPPING.get(repo_manager_class) is not None:
-        raise RuntimeError(
-            f"RepositoryManager {repo_manager_class.__name__} is already registered with a database session method."
-        )
-
-    DB_SESSION_MAPPING[repo_manager_class] = generic_async_db_session_method
 
 
 def register_sessions(pairs: Iterable[tuple[type[RepositoryManager], Any | DBConfig]]):
@@ -240,3 +173,21 @@ def register_sessions(pairs: Iterable[tuple[type[RepositoryManager], Any | DBCon
             register_async_session(repo_manager_class, config)
         else:
             register_session(repo_manager_class, config)
+
+
+async def unregister_sessions(repo_manager_classes: Iterable[type[RepositoryManager]]):
+    """Unregister multiple repository managers, closing their database engines."""
+    for repo_manager_class in repo_manager_classes:
+        if not issubclass(repo_manager_class, RepositoryManager):
+            raise ValueError(
+                f"Unsupported repository manager type: {repo_manager_class}. Only RepositoryManager subclasses are supported."
+            )
+
+        engine = ENGINE_MAPPING.pop(repo_manager_class, None)
+        if engine is not None:
+            if isinstance(engine, AsyncEngine):
+                await engine.dispose()
+            else:
+                engine.dispose()
+
+        DB_MAPPING.pop(repo_manager_class, None)

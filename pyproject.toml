@@ -49,6 +49,7 @@ dev = [
     "tqdm>=4.66.6",
     "yappi>=1.6.10",
     "types-python-dateutil",
+    "aiosqlite>=0.22.1",
 ]
 
 [build-system]

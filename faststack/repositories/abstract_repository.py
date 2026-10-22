@@ -52,13 +52,13 @@ class AbstractRepository(ABC):  # noqa: B024
             params = {}
 
         count_query = f"SELECT COUNT(*) FROM ({query}) AS subquery"
-        count_result = self.db.execute(count_query, params)
+        count_result = self.db.execute(text(count_query), params)
         total_count = count_result.scalar()  # Get the total count of records
         query += self._get_limit_offset(pagination)
         params["limit"] = pagination.limit
         params["offset"] = pagination.offset
 
-        results = self.db.execute(query, params).mappings().all()
+        results = self.db.execute(text(query), params).mappings().all()
         results = [dict(row) for row in results]
 
         return PaginatedList(count=total_count, rows=results)
@@ -75,13 +75,13 @@ class AbstractRepository(ABC):  # noqa: B024
             params = {}
 
         count_query = f"SELECT COUNT(*) FROM ({query}) AS subquery"
-        count_result = await self.db.execute(count_query, params)
+        count_result = await self.db.execute(text(count_query), params)
         total_count = count_result.scalar()  # Get the total count of records
         query += self._get_limit_offset(pagination)
         params["limit"] = pagination.limit
         params["offset"] = pagination.offset
 
-        results = await self.db.execute(query, params)
+        results = await self.db.execute(text(query), params)
         results = results.mappings().all()
         results = [dict(row) for row in results]
 
@@ -105,13 +105,13 @@ class AbstractRepository(ABC):  # noqa: B024
             raise ValueError("Model and response_model must be provided to map the data to the model.")
 
         count_query = f"SELECT COUNT(*) FROM ({query}) AS subquery"
-        count_result = self.db.execute(count_query, params)
+        count_result = self.db.execute(text(count_query), params)
         total_count = count_result.scalar()  # Get the total count of records
         query += self._get_limit_offset(pagination)
         params["limit"] = pagination.limit
         params["offset"] = pagination.offset
 
-        result = self.db.execute(query, params)
+        result = self.db.execute(text(query), params)
         data = pd.DataFrame(result.fetchall(), columns=result.keys())
         data = map_data_to_model(data, model)
 
@@ -135,13 +135,13 @@ class AbstractRepository(ABC):  # noqa: B024
             raise ValueError("Model and response_model must be provided to map the data to the model.")
 
         count_query = f"SELECT COUNT(*) FROM ({query}) AS subquery"
-        count_result = await self.db.execute(count_query, params)
+        count_result = await self.db.execute(text(count_query), params)
         total_count = count_result.scalar()  # Get the total count of records
         query += self._get_limit_offset(pagination)
         params["limit"] = pagination.limit
         params["offset"] = pagination.offset
 
-        result = await self.db.execute(query, params)
+        result = await self.db.execute(text(query), params)
         data = pd.DataFrame(result.fetchall(), columns=result.keys())
         data = map_data_to_model(data, model)
 
@@ -152,7 +152,7 @@ class AbstractRepository(ABC):  # noqa: B024
         self._only_select_validation(query)
         if params is None:
             params = {}
-        results = self.db.execute(query, params).mappings().all()
+        results = self.db.execute(text(query), params).mappings().all()
         return [dict(row) for row in results]
 
     async def fetch_list(self, query: str, params: dict[str, Any] | None = None) -> list[dict[str, Any]]:
@@ -215,7 +215,7 @@ class AbstractRepository(ABC):  # noqa: B024
         self._only_select_validation(query)
         if params is None:
             params = {}
-        result = self.db.execute(query, params)
+        result = self.db.execute(text(query), params)
         data = result.fetchall()
         columns = result.keys()
 
@@ -234,7 +234,7 @@ class AbstractRepository(ABC):  # noqa: B024
         self._only_select_validation(query)
         if params is None:
             params = {}
-        result = await self.db.execute(query, params)
+        result = await self.db.execute(text(query), params)
         data = result.fetchall()
         columns = result.keys()
 
