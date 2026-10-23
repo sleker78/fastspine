@@ -1,7 +1,5 @@
 import contextvars
 
-from pydantic import Field
-
 _cache_enabled_var: contextvars.ContextVar[bool | None] = contextvars.ContextVar("_cache_enabled_var", default=None)
 
 
@@ -14,8 +12,7 @@ class CacheSettings:
     REDIS_HOST: str = "localhost"
     CACHE_ENABLED: bool = True
     CACHE_KEY_PREFIX: str | None = None
-    # CACHE SETTINGS
-    CACHED_DISABLED_USERS: list[str] = Field(default=[])
+    CACHED_DISABLED_USERS: list[str] = []
 
     def get_url(self):
         """Construct the Redis URL from the settings."""

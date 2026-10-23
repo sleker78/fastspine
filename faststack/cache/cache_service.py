@@ -95,10 +95,13 @@ class CacheService(BaseService):
             return cached_value
 
         # If not cached, call the provider to get the value
+        redis_lock = lock(cache_key)
+        if redis_lock is None:
+            return await provider()
+
         acquired = False
         try:
-            # stampedo prevention
-            redis_lock = await lock(cache_key)
+            # stampede prevention
             acquired = await redis_lock.acquire(blocking=True)
 
             value = await provider()

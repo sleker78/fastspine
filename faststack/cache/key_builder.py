@@ -1,4 +1,5 @@
 import hashlib
+import inspect
 import io
 import json
 from enum import Enum
@@ -87,7 +88,9 @@ class KeyBuilder:
         kwargs: dict[str, Any],
     ) -> str:
         """Builds a cache key based on the function name, module, and parameters."""
-        key_args = args[1:] if args and hasattr(args[0], "__class__") else args
+        sig_params = list(inspect.signature(func).parameters)
+        is_bound_method = bool(sig_params) and sig_params[0] in ("self", "cls")
+        key_args = args[1:] if is_bound_method and args else args
 
         # Normalize args for deterministic serialization (sort lists and dicts)
         normalized_args = KeyBuilder._normalize_for_cache(key_args)
@@ -108,7 +111,7 @@ class KeyBuilder:
     ) -> str:
         """Builds a cache key for request-based functions."""
         normalized_params = KeyBuilder._normalize_for_cache(params)
-        cache_key = f"{version}:{version}:{func.__module__}:{func.__name__}:{json.dumps(normalized_params)}"
+        cache_key = f"{key_prefix}:{version}:{func.__module__}:{func.__name__}:{json.dumps(normalized_params)}"
         return KeyBuilder.hash_key(cache_key)
 
     @staticmethod

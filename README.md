@@ -301,6 +301,18 @@ managers in that process — make sure your Celery worker's entrypoint imports i
 `# noqa: F401` import as the FastAPI entrypoint), since a worker is a separate process with its own
 import state.
 
+## Further documentation
+
+- [Database](_docs/database.md) — settings → `RepositoryManager` classes → registration →
+  repositories/services, including why manager classes belong in one file and registration in
+  another (and that "bootstrap" is just a name, not a requirement).
+- [Configuration](_docs/configuration.md) — every `CoreSettings` field (app, cache, Celery,
+  profiler, mailer) and `DBConfig`, with defaults and what each one actually controls.
+- [Caching](_docs/caching.md) — the decorators, `CacheService`/`CachableModel`, encoders, and the
+  low-level `redis_cache` functions underneath all of them.
+- [CLI](_docs/cli.md) — `ScopedTyper`/`command_scope`, and why CLI commands need their own
+  repository-manager lifecycle (there's no `Depends()` to open/close sessions for you).
+
 ## Development
 
 Common tasks are available via `make`:
