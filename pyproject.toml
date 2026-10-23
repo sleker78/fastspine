@@ -19,7 +19,6 @@ dependencies = [
     "pydantic-settings>=2.3.4",
     "psutil>=5.9.0",
     "python-dateutil>=2.9.0,<3",
-    "pytest>=8.3.3",
     "redis>=5.0.7",
     "sqlalchemy>=2.0.36,<3",
     "starlette>=0.40.0,<0.47.0",
@@ -50,6 +49,7 @@ dev = [
     "yappi>=1.6.10",
     "types-python-dateutil",
     "aiosqlite>=0.22.1",
+    "pytest>=8.3.3",
 ]
 
 [build-system]
@@ -62,7 +62,7 @@ exclude = ["docs", ".venv", "venv", "node_modules", "__pycache__", ".git", ".uv-
 [tool.deptry.per_rule_ignores]
 DEP002 = ["openpyxl", "aiomysql", "asyncpg", "greenlet", "typer"]
 DEP003 = ["httpx"]
-DEP004 = ["pytest_asyncio"]
+DEP004 = ["pytest_asyncio", "pytest"]
 
 [tool.mypy]
 ignore_missing_imports = true
