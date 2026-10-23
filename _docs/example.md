@@ -30,7 +30,7 @@ One `DBConfig` for the one database, plus caching - both come from the same sett
 # myapp/settings.py
 from pydantic_settings import BaseSettings
 
-from faststack.database.engine import DBConfig, DBServices
+from fastspine.database.engine import DBConfig, DBServices
 
 
 class AppSettings(BaseSettings):
@@ -67,13 +67,13 @@ side - no schema, no separate install.
 
 ## 2. The model
 
-One table, mapped against FastStack's declarative `Base` so `BaseRepository` can work with it:
+One table, mapped against FastSpine's declarative `Base` so `BaseRepository` can work with it:
 
 ```python
 # myapp/models/order.py
 from sqlalchemy.orm import Mapped, mapped_column
 
-from faststack.models.base import Base
+from fastspine.models.base import Base
 
 
 class Order(Base):
@@ -94,7 +94,7 @@ later:
 # myapp/db/sessions.py
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from faststack import RepositoryManager
+from fastspine import RepositoryManager
 
 
 class AppRepositoryManager(RepositoryManager[AsyncSession]):
@@ -107,7 +107,7 @@ why this has to be explicit per-process):
 
 ```python
 # myapp/bootstrap.py
-from faststack.dependencies.database import register_sessions
+from fastspine.dependencies.database import register_sessions
 
 from myapp.db.sessions import AppRepositoryManager
 from myapp.settings import settings
@@ -121,7 +121,7 @@ register_sessions([
 
 ```python
 # myapp/repositories/order_repository.py
-from faststack import BaseRepository
+from fastspine import BaseRepository
 
 from myapp.models.order import Order
 
@@ -141,7 +141,7 @@ read method with `cache_method_async` (per [Caching](caching.md#decorators)):
 # myapp/services/order_service.py
 from datetime import timedelta
 
-from faststack import BaseService, cache_method_async
+from fastspine import BaseService, cache_method_async
 
 from myapp.db.sessions import AppRepositoryManager
 from myapp.models.order import Order
@@ -177,12 +177,12 @@ from typing import Annotated
 
 from fastapi import Depends
 
-from faststack import FastStackApp, service_dep
+from fastspine import FastSpineApp, service_dep
 
 from myapp.settings import settings
 from myapp.services.order_service import OrderService
 
-app = FastStackApp(settings=settings, title=settings.PROJECT_NAME)
+app = FastSpineApp(settings=settings, title=settings.PROJECT_NAME)
 
 OrderServiceDep = Annotated[OrderService, Depends(service_dep(OrderService))]
 

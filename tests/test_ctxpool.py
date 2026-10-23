@@ -1,6 +1,6 @@
 import pytest
 
-from faststack.ctx.ctx_pool import CtxPool
+from fastspine.ctx.ctx_pool import CtxPool
 
 
 @pytest.fixture

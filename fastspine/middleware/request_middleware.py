@@ -6,8 +6,8 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request as StarletteRequest
 from starlette.types import ASGIApp, Receive, Scope, Send
 
-from faststack.lib.contextualize import contextualize
-from faststack.lib.profiler import Profiler
+from fastspine.lib.contextualize import contextualize
+from fastspine.lib.profiler import Profiler
 
 from ..ctx.ctx_pool import ctxpool
 

@@ -2,9 +2,9 @@ from unittest.mock import Mock
 
 import pytest
 
-from faststack.cache import cache_decorater, redis_cache
-from faststack.cache.cache_exception import CacheError
-from faststack.ctx.ctx_pool import ctxpool
+from fastspine.cache import cache_decorater, redis_cache
+from fastspine.cache.cache_exception import CacheError
+from fastspine.ctx.ctx_pool import ctxpool
 
 
 class _FakeAsyncLock:

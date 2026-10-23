@@ -1,6 +1,6 @@
 # Configuration
 
-FastStack configuration has two independent parts:
+FastSpine configuration has two independent parts:
 
 1. **`CoreSettings`** — framework-wide settings (app, cache, Celery, mailer, profiler). Populated
    once at startup from your own `pydantic_settings.BaseSettings` subclass.
@@ -17,7 +17,7 @@ initialize `CoreSettings` from it once, at process startup:
 
 ```python
 from pydantic_settings import BaseSettings
-from faststack.settings import init_core_settings
+from fastspine.settings import init_core_settings
 
 
 class AppSettings(BaseSettings):
@@ -32,7 +32,7 @@ init_core_settings(AppSettings())
 After that, any code in the process calls `get_core_settings()` to read it back:
 
 ```python
-from faststack.settings import get_core_settings
+from fastspine.settings import get_core_settings
 
 settings = get_core_settings()
 if settings.DEBUG_MODE:
@@ -40,7 +40,7 @@ if settings.DEBUG_MODE:
 ```
 
 `get_core_settings()` raises `RuntimeError("CoreSettings is not initialized")` if nothing called
-`init_core_settings()` first in that process — every process that uses FastStack (the FastAPI app,
+`init_core_settings()` first in that process — every process that uses FastSpine (the FastAPI app,
 a Celery worker, a CLI command) needs its own `init_core_settings()` call, for the same reason the
 [README](../README.md#3-define-a-repositorymanager-per-database-and-register-it-via-a-dedicated-bootstrap-module)
 says repository manager registration needs one per process.
@@ -57,14 +57,14 @@ field is merely absent from an otherwise-provided `BaseSettings`.
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `DEBUG_MODE` | `bool` | `False` | Enables debug-only behavior: `DebugUtil.debug(...)` only prints when this is `True`; `FastStackApp`'s streaming-middleware incompatibility check only runs when this is `True`. |
-| `PROJECT_NAME` | `str` | `"FastStackLib Application::Change me in production"` | Used as the FastAPI app title by `FastStackApp`/`run_fast_core_app` when you don't pass your own `title=`. |
+| `DEBUG_MODE` | `bool` | `False` | Enables debug-only behavior: `DebugUtil.debug(...)` only prints when this is `True`; `FastSpineApp`'s streaming-middleware incompatibility check only runs when this is `True`. |
+| `PROJECT_NAME` | `str` | `"FastSpineLib Application::Change me in production"` | Used as the FastAPI app title by `FastSpineApp`/`run_fast_core_app` when you don't pass your own `title=`. |
 
 ## Cache settings
 
-Redis connection details plus the global cache on/off switch. Used by `faststack.cache` (the
+Redis connection details plus the global cache on/off switch. Used by `fastspine.cache` (the
 `cache_response`/`cache_method`/`cache_method_async` decorators and the lower-level
-`faststack.cache.redis_cache` functions) and by `faststack.redis.client`. See
+`fastspine.cache.redis_cache` functions) and by `fastspine.redis.client`. See
 [Caching](caching.md) for how these fields are actually used.
 
 | Field | Type | Default | Description |
@@ -74,11 +74,11 @@ Redis connection details plus the global cache on/off switch. Used by `faststack
 | `REDIS_HOST` | `str` | `"localhost"` | Redis host, used by `CacheSettings.get_redis_url()`. |
 | `REDIS_PORT` | `int` | `6379` | Redis port, used by `CacheSettings.get_redis_url()`. |
 | `CACHE_ENABLED` | `bool` | `True` | Global cache on/off switch. When `False`, `get_redis_client()`/`get_sync_redis_client()` return `None`, and every cache helper degrades to a no-op (cache miss on read, no-op on write) instead of touching Redis. |
-| `CACHE_KEY_PREFIX` | `str \| None` | `None` | Prefix used when building Celery task dedupe keys in `BaseTask.generate_unique_task_id`. Not used by the `faststack.cache` decorators themselves (they build their own keys via `KeyBuilder`). |
+| `CACHE_KEY_PREFIX` | `str \| None` | `None` | Prefix used when building Celery task dedupe keys in `BaseTask.generate_unique_task_id`. Not used by the `fastspine.cache` decorators themselves (they build their own keys via `KeyBuilder`). |
 | `CACHED_DISABLED_USERS` | `list[str]` | `[]` | Email addresses for which caching is force-disabled, checked by `set_cache_enabled(user_email)` (wired up by `RequestMiddleware`, keyed off the authenticated user). |
 
 **Note:** `CacheSettings.get_redis_url()` builds a `redis://user:password@host:port` URL from the four
-`REDIS_*` fields above - this is what `faststack.redis.client.get_redis_client`/
+`REDIS_*` fields above - this is what `fastspine.redis.client.get_redis_client`/
 `get_sync_redis_client` actually connect to. It's intentionally separate from `CELERY_BROKER_URI`
 (below): caching and Celery's broker can point at the same Redis instance or two different ones,
 your choice. If you only run one Redis instance for both, set `REDIS_HOST`/`REDIS_PORT`/etc. *and*
@@ -88,7 +88,7 @@ your choice. If you only run one Redis instance for both, set `REDIS_HOST`/`REDI
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `CELERY_BROKER_URI` | `str` | `""` | Celery broker connection URL. Only used by Celery (`faststack.celery.engine`) - the cache layer connects via `CacheSettings.get_redis_url()`/`REDIS_*` (above) instead, not this field. Must be a `redis://`, `rediss://`, or `unix://` URL (empty string fails to parse). |
+| `CELERY_BROKER_URI` | `str` | `""` | Celery broker connection URL. Only used by Celery (`fastspine.celery.engine`) - the cache layer connects via `CacheSettings.get_redis_url()`/`REDIS_*` (above) instead, not this field. Must be a `redis://`, `rediss://`, or `unix://` URL (empty string fails to parse). |
 | `CELERY_BACKEND_URI` | `str` | `"redis://localhost:6385/0"` | Celery result backend URL. |
 | `CELERY_RESULT_EXPIRES` | `int` | `604800` (7 days, in seconds) | How long Celery keeps task results around. |
 | `CELERY_MAIN_NAME` | `str` | `"_redis_main"` | Name of the main Celery app instance. |
@@ -98,8 +98,8 @@ your choice. If you only run one Redis instance for both, set `REDIS_HOST`/`REDI
 
 ## Profiler settings
 
-Control `faststack.lib.profiler.Profiler`, as constructed by `load_profiler()`/`fetch_profiler()`
-(`faststack.dependencies.profiler`).
+Control `fastspine.lib.profiler.Profiler`, as constructed by `load_profiler()`/`fetch_profiler()`
+(`fastspine.dependencies.profiler`).
 
 | Field | Type | Default | Description |
 |---|---|---|---|
@@ -110,7 +110,7 @@ Control `faststack.lib.profiler.Profiler`, as constructed by `load_profiler()`/`
 
 ## Mailer settings
 
-Passed straight through to `fastapi-mail`'s `ConnectionConfig` by `faststack.mailer`. See
+Passed straight through to `fastapi-mail`'s `ConnectionConfig` by `fastspine.mailer`. See
 [fastapi-mail's docs](https://sabuhish.github.io/fastapi-mail/) for what each field controls.
 
 | Field | Type | Default |
@@ -126,7 +126,7 @@ Passed straight through to `fastapi-mail`'s `ConnectionConfig` by `faststack.mai
 | `VALIDATE_CERTS` | `bool \| None` | `None` |
 
 All nine are typed `| None`, so `CoreSettings` won't raise if your `BaseSettings` subclass omits
-them entirely — but `faststack.mailer` will fail at the point it actually tries to send mail if the
+them entirely — but `fastspine.mailer` will fail at the point it actually tries to send mail if the
 required ones (server, port, credentials) were never set.
 
 ## Logging/printing settings as-is
@@ -145,7 +145,7 @@ no fixed `DATABASE_*` field set. See the
 (group fields per database, expose a `@property` returning a `DBConfig`), and step 3 for how
 `DBConfig` instances get wired to `RepositoryManager` subclasses via `register_sessions`.
 
-`faststack.database.engine.DBConfig` fields:
+`fastspine.database.engine.DBConfig` fields:
 
 | Field | Type | Default | Description |
 |---|---|---|---|

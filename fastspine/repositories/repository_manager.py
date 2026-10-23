@@ -3,7 +3,7 @@ from typing import Any, cast
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 
-from faststack.lib.profiler import Profiler
+from fastspine.lib.profiler import Profiler
 
 from ..dependencies.profiler import load_profiler
 from ..types import DBSessions

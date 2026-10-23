@@ -673,7 +673,7 @@ wheels = [
 ]
 
 [[package]]
-name = "faststack"
+name = "fastspine"
 version = "1.0.0"
 source = { editable = "." }
 dependencies = [

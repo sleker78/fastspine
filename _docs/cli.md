@@ -1,6 +1,6 @@
 # CLI
 
-`faststack.cli.scoped_typer` gives CLI commands (built on [Typer](https://typer.tiangolo.com/))
+`fastspine.cli.scoped_typer` gives CLI commands (built on [Typer](https://typer.tiangolo.com/))
 the same repository-manager lifecycle that FastAPI gives a request: open sessions lazily as
 they're used, close everything once the command is done - whether it succeeded or raised.
 
@@ -21,8 +21,8 @@ looks like in practice:
 
 ```python
 # myapp/cli/commands/orders.py
-from faststack.cli.scoped_typer import ScopedTyper
-from faststack import load_service
+from fastspine.cli.scoped_typer import ScopedTyper
+from fastspine import load_service
 
 from myapp.services.sync_service import OrderSyncService
 
@@ -37,8 +37,8 @@ async def sync():
 
 ```python
 # myapp/cli/commands/keywords.py
-from faststack.cli.scoped_typer import ScopedTyper
-from faststack import load_service
+from fastspine.cli.scoped_typer import ScopedTyper
+from fastspine import load_service
 
 from myapp.services.keyword_service import KeywordExtractionService
 
@@ -57,7 +57,7 @@ async def extract():
 
 import myapp.bootstrap  # noqa: F401  (must run before any command uses a repository manager)
 
-from faststack.cli.scoped_typer import ScopedTyper
+from fastspine.cli.scoped_typer import ScopedTyper
 from myapp.cli.commands import keywords, orders
 
 app = ScopedTyper(no_args_is_help=True)
@@ -80,7 +80,7 @@ registered command as the app's default, no subcommand name needed).
 
 ### What `myapp.bootstrap` actually is
 
-`import myapp.bootstrap` in `main.py` isn't a FastStack API call - it's your own small module
+`import myapp.bootstrap` in `main.py` isn't a FastSpine API call - it's your own small module
 whose only job is registering every `RepositoryManager` with its database, as an import-time side
 effect (full pattern: [README, step 3](../README.md#3-define-a-repositorymanager-per-database-and-register-it-via-a-dedicated-bootstrap-module)):
 
@@ -88,8 +88,8 @@ effect (full pattern: [README, step 3](../README.md#3-define-a-repositorymanager
 # myapp/bootstrap.py
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from faststack import RepositoryManager
-from faststack.dependencies.database import register_sessions
+from fastspine import RepositoryManager
+from fastspine.dependencies.database import register_sessions
 
 from myapp.settings import settings
 
@@ -112,7 +112,7 @@ before any command gets a chance to run.
 Why it has to be imported explicitly in `main.py`, rather than relying on it happening naturally:
 a CLI invocation is a fresh process with its own import state (same as a Celery worker, different
 from the FastAPI app process) - nothing else in the CLI's import graph is guaranteed to import
-`myapp.bootstrap` for you. `orders.py`/`keywords.py` import `faststack`/`myapp.services.*`, not
+`myapp.bootstrap` for you. `orders.py`/`keywords.py` import `fastspine`/`myapp.services.*`, not
 `myapp.bootstrap` - so without the explicit import in `main.py`, the registration would simply
 never happen in the CLI process, and every command would fail at the `load_repository_manager`
 call with the "not registered" error above, regardless of which database it needs.
@@ -133,7 +133,7 @@ Typer; a plain `def` command is registered as-is.
    *next* command invocation starts clean rather than reusing a stale/closed session.
 
 ```python
-from faststack.cli.scoped_typer import command_scope
+from fastspine.cli.scoped_typer import command_scope
 
 # Equivalent to what ScopedTyper does for you automatically:
 wrapped = command_scope(my_async_command)
@@ -142,14 +142,14 @@ wrapped(*args, **kwargs)  # runs synchronously, internally via asyncio.run
 
 ### `repository_manager_scope`
 
-`faststack.dependencies.repository_manager.repository_manager_scope()` is the async context
+`fastspine.dependencies.repository_manager.repository_manager_scope()` is the async context
 manager `command_scope` uses internally. It's generic - not CLI-specific - so you can reach for it
 directly in any async, non-FastAPI, non-Celery context that needs the same open-lazily/close-at-
 the-end behavior (a one-off script, an async context manager of your own, etc.):
 
 ```python
-from faststack.dependencies.repository_manager import repository_manager_scope
-from faststack import load_repository_manager
+from fastspine.dependencies.repository_manager import repository_manager_scope
+from fastspine import load_repository_manager
 
 async def run_once():
     async with repository_manager_scope():

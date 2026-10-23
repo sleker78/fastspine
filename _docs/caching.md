@@ -1,12 +1,12 @@
 # Caching
 
-FastStack's cache layer (`faststack.cache`) is built on Redis, with three usage levels:
+FastSpine's cache layer (`fastspine.cache`) is built on Redis, with three usage levels:
 
 1. **Decorators** (`cache_response`, `cache_method`, `cache_method_async`) — cache a function's
    return value across calls. The usual entry point.
 2. **`CacheService`** — cache/fetch a single `CachableModel` instance by its own identity, with a
    read-through `fetch_cache` helper for stampede-safe lazy loading.
-3. **`faststack.cache.redis_cache`** — the low-level `cache_get`/`cache_set`/`cache_delete`/`lock`
+3. **`fastspine.cache.redis_cache`** — the low-level `cache_get`/`cache_set`/`cache_delete`/`lock`
    functions everything above is built on. Reach for these directly only if the two levels above
    don't fit.
 
@@ -17,7 +17,7 @@ level here degrades to "just call the underlying function" rather than raising.
 
 ## Running Redis locally
 
-FastStack already depends on `redis` (the Python client) - there's nothing extra to install on the
+FastSpine already depends on `redis` (the Python client) - there's nothing extra to install on the
 Python side. You just need a Redis *server* reachable at whatever `REDIS_HOST`/`REDIS_PORT` you
 configure. For local development, the quickest way is Docker:
 
@@ -41,7 +41,7 @@ caching.
 
 ## Connection
 
-`faststack.redis.client.get_redis_client()`/`get_sync_redis_client()` build the Redis clients
+`fastspine.redis.client.get_redis_client()`/`get_sync_redis_client()` build the Redis clients
 (async and sync respectively) that everything else uses, from `CacheSettings.get_redis_url()` - i.e. the
 `REDIS_USER`/`REDIS_PASSWORD`/`REDIS_HOST`/`REDIS_PORT` fields, not `CELERY_BROKER_URI`. This is
 intentionally a separate connection target from Celery's broker (see the note in
@@ -62,7 +62,7 @@ redis-py. A Redis outage only ever surfaces at the point something is actually s
 | `cache_method` | Any sync function/method | `PickledEncoder` (pickle) | function args/kwargs, via `KeyBuilder.key_builder` |
 
 ```python
-from faststack import cache_method_async
+from fastspine import cache_method_async
 
 class ReviewerService:
     @cache_method_async(expire=timedelta(minutes=10))
@@ -134,7 +134,7 @@ For caching a single object by its own identity rather than by a function call, 
 `CachableModel`:
 
 ```python
-from faststack.cache.cache_model import CachableModel
+from fastspine.cache.cache_model import CachableModel
 
 class ReviewerProfile(CachableModel):
     reviewer_id: int
@@ -147,7 +147,7 @@ class ReviewerProfile(CachableModel):
         return 3600  # 0 = no expiration
 ```
 
-`CacheService` (`faststack.cache.cache_service.CacheService`) then gives you:
+`CacheService` (`fastspine.cache.cache_service.CacheService`) then gives you:
 
 - **`set(instance)` / `sync_set(instance)`** — cache the instance under a key derived from its
   class name + `get_cache_identifier()` (via `KeyBuilder.model_key_builder`).
@@ -172,8 +172,8 @@ anything).
 
 ## Encoders
 
-`faststack.cache.cache_encoder.Encoder` is the `encode`/`decode` protocol every cache function
-takes a `decoder=`/`encoder=` for. Two implementations ship with FastStack:
+`fastspine.cache.cache_encoder.Encoder` is the `encode`/`decode` protocol every cache function
+takes a `decoder=`/`encoder=` for. Two implementations ship with FastSpine:
 
 - **`PickledEncoder`** (the default everywhere except `cache_response`) — `pickle.dumps`/`.loads`.
   Handles arbitrary Python objects (ORM instances, dataclasses, Pydantic models, ...).
@@ -186,7 +186,7 @@ no base class required (`Encoder` is a `typing.Protocol`).
 
 ## Errors
 
-Every cache function wraps Redis/decode failures in `faststack.cache.cache_exception.CacheError`:
+Every cache function wraps Redis/decode failures in `fastspine.cache.cache_exception.CacheError`:
 
 - `redis.exceptions.RedisError` (connection issues, etc.) during any Redis call.
 - `json.JSONDecodeError` / `ValueError` (the latter covers `PickledEncoder.decode`'s own
@@ -196,7 +196,7 @@ The decorators catch `CacheError` and decide what to do based on `ignore_errors`
 methods re-raise it as `CacheError` too, with no `ignore_errors` option - callers decide how to
 handle it themselves.
 
-## Low-level functions (`faststack.cache.redis_cache`)
+## Low-level functions (`fastspine.cache.redis_cache`)
 
 Only reach for these directly if you're not using a decorator or `CacheService`.
 

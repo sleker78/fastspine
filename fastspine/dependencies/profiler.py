@@ -1,4 +1,4 @@
-from faststack.lib.profiler import Profiler
+from fastspine.lib.profiler import Profiler
 
 from ..ctx.ctx_pool import ctxpool
 from ..settings import get_core_settings

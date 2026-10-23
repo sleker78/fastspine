@@ -1,7 +1,7 @@
 import pytest
 
-from faststack.dependencies.services import load_service, load_services, service_dep
-from faststack.services.base_service import BaseService
+from fastspine.dependencies.services import load_service, load_services, service_dep
+from fastspine.services.base_service import BaseService
 
 
 class _ServiceWithDefault(BaseService):

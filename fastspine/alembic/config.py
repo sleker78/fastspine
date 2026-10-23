@@ -1,4 +1,4 @@
-from faststack.database.engine import DBConfig
+from fastspine.database.engine import DBConfig
 from pydantic import SecretStr
 
 

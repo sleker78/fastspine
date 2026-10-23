@@ -30,5 +30,5 @@ check: test ruff-formatter ruff deptry mypy ## Run all checks
 
 .PHONY: mypy
 mypy:  ## Run mypy type checker
-	uv run mypy faststack
+	uv run mypy fastspine
 	

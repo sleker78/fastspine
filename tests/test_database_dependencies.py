@@ -3,8 +3,8 @@ from sqlalchemy.engine import Engine
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
 from sqlalchemy.orm import Session
 
-from faststack.dependencies import database as database_module
-from faststack.dependencies.database import (
+from fastspine.dependencies import database as database_module
+from fastspine.dependencies.database import (
     DB_MAPPING,
     ENGINE_MAPPING,
     _aload_db,

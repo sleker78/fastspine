@@ -4,8 +4,8 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 
-from faststack.repositories.abstract_repository import AbstractRepository
-from faststack.repositories.repository_manager import RepositoryManager
+from fastspine.repositories.abstract_repository import AbstractRepository
+from fastspine.repositories.repository_manager import RepositoryManager
 
 
 class _FakeRepo(AbstractRepository):

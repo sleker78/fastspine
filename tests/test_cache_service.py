@@ -1,8 +1,8 @@
 import pytest
 
-from faststack.cache import cache_service, redis_cache
-from faststack.cache.cache_model import CachableModel
-from faststack.cache.cache_service import CacheService
+from fastspine.cache import cache_service, redis_cache
+from fastspine.cache.cache_model import CachableModel
+from fastspine.cache.cache_service import CacheService
 
 
 class _Widget(CachableModel):

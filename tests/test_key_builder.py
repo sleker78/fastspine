@@ -1,4 +1,4 @@
-from faststack.cache.key_builder import KeyBuilder
+from fastspine.cache.key_builder import KeyBuilder
 
 
 def _handler():

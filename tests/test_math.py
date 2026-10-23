@@ -1,4 +1,4 @@
-from faststack.util.math import clamp
+from fastspine.util.math import clamp
 
 
 def test_clamp():

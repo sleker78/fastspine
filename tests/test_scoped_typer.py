@@ -2,8 +2,8 @@ import pytest
 from sqlalchemy.orm import Session
 from typer.testing import CliRunner
 
-from faststack.cli.scoped_typer import ScopedTyper, command_scope
-from faststack.dependencies.repository_manager import _repo_manager_cache_var, load_repository_manager
+from fastspine.cli.scoped_typer import ScopedTyper, command_scope
+from fastspine.dependencies.repository_manager import _repo_manager_cache_var, load_repository_manager
 
 runner = CliRunner()
 

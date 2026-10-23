@@ -4,8 +4,8 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 
-from faststack.dependencies.repository_manager import _repo_manager_cache_var
-from faststack.middleware.session_middleware import DBSessionMiddleware, DBSessionMiddlewareASGI
+from fastspine.dependencies.repository_manager import _repo_manager_cache_var
+from fastspine.middleware.session_middleware import DBSessionMiddleware, DBSessionMiddlewareASGI
 
 
 @pytest.mark.asyncio

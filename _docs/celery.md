@@ -1,8 +1,8 @@
 # Celery
 
-`faststack.celery` provides two things:
+`fastspine.celery` provides two things:
 
-1. **`get_celery_instance(settings)`** (`faststack.celery.engine`) - builds a `Celery` instance
+1. **`get_celery_instance(settings)`** (`fastspine.celery.engine`) - builds a `Celery` instance
    from your settings.
 2. **`BaseTask`** - a task base class that gives each task Redis-backed deduplication, automatic
    repository-manager session cleanup, and failure-fallback dispatch.
@@ -11,7 +11,7 @@ Celery settings (`CELERY_BROKER_URI`, `CELERY_BACKEND_URI`, `CELERY_TASK_FOLDERS
 documented in [Configuration: Celery settings](configuration.md#celery-settings) - this doc
 covers how they're used, not what each one means.
 
-**`BaseTask` assumes sync tasks.** Its session cleanup (`faststack.dependencies.repository_manager._close_sessions_sync`)
+**`BaseTask` assumes sync tasks.** Its session cleanup (`fastspine.dependencies.repository_manager._close_sessions_sync`)
 can only close a sync `Session`; if a task loads an `AsyncSession`-backed `RepositoryManager`, it
 logs an error and leaves that session open rather than crashing (see
 ["Session cleanup" below](#session-cleanup-on-completionfailure)). Write tasks as plain `def`, not
@@ -29,7 +29,7 @@ whether you're about to start a worker or just need to call `.delay()` on a task
 # myapp/celery_app.py
 import myapp.bootstrap  # noqa: F401  (must run before any task uses a repository manager)
 
-from faststack.celery.engine import get_celery_instance
+from fastspine.celery.engine import get_celery_instance
 
 from myapp.settings import settings
 
@@ -63,8 +63,8 @@ task on the app:
 
 ```python
 # myapp/jobs/tasks.py
-from faststack.celery.base_task import BaseTask
-from faststack import load_service
+from fastspine.celery.base_task import BaseTask
+from fastspine import load_service
 
 from myapp.celery_app import app
 from myapp.services.sync_service import OrderSyncService
@@ -131,7 +131,7 @@ itself - it calls a service method, and the service is what knows it needs to en
 
 ```python
 # myapp/services/sync_service.py
-from faststack import BaseService
+from fastspine import BaseService
 
 
 class OrderSyncService(BaseService):
@@ -165,7 +165,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends
 
-from faststack import service_dep
+from fastspine import service_dep
 
 from myapp.services.sync_service import OrderSyncService
 
@@ -232,10 +232,10 @@ python myapp/worker_main.py
 ```
 
 Run this exact script, unmodified, in both environments - a local dev `.env` sets `DEBUG_MODE=True`
-(a field already on FastStack's `AppSettings`, so `settings.DEBUG_MODE` works out of the box),
+(a field already on FastSpine's `AppSettings`, so `settings.DEBUG_MODE` works out of the box),
 which forces `--concurrency=1` so a single task runs at a time and is easy to step through in a
 debugger. A prod deployment sets `DEBUG_MODE=False` and a real `CONCURRENCY` - the latter isn't a
-FastStack field, it's just a plain `int` setting you add to your own settings class, sourced the
+FastSpine field, it's just a plain `int` setting you add to your own settings class, sourced the
 same way the rest of your settings are (env vars/config map) - **set it to more than `1`** in
 prod: with the default prefork pool, `--concurrency=N` runs `N` worker child processes pulling
 from the same queue, so `1` leaves you with no parallelism at all (every task waits for the
@@ -250,7 +250,7 @@ called in-process with the same `argv` it would otherwise parse from `sys.argv`.
 Because `myapp/celery_app.py` already calls `autodiscover_tasks` eagerly at import time (see
 above), importing `app` from it here is enough - this script doesn't need to repeat that call.
 
-`faststack.celery.engine` also exposes `run_celery_worker(settings, argv)`, which builds its own
+`fastspine.celery.engine` also exposes `run_celery_worker(settings, argv)`, which builds its own
 `Celery` instance (via `get_celery_instance`), autodiscovers tasks on it, and calls `worker_main`
 - all in one call. Don't reach for it once you have a module like `myapp/celery_app.py`: it builds
 a *second*, separate `Celery` instance, distinct from the `app` your tasks were decorated against

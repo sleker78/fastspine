@@ -20,10 +20,10 @@ except ImportError:
     celery = None
 
 _EMPTY_CONTEXT: Dict[str, Any] = {}
-log_context: ContextVar[Dict[str, Any]] = ContextVar("faststack_log_context", default=_EMPTY_CONTEXT)
+log_context: ContextVar[Dict[str, Any]] = ContextVar("fastspine_log_context", default=_EMPTY_CONTEXT)
 
 
-class FastStackFormatter(logging.Formatter):
+class FastSpineFormatter(logging.Formatter):
     """Custom formatter class with colors, timestamps, log levels, and logger names."""
 
     NAME_WIDTH: int = 16
@@ -113,7 +113,7 @@ def setup_logging(
 
     # Stdout logging
     stdout_handler = logging.StreamHandler()
-    stdout_handler.setFormatter(FastStackFormatter())
+    stdout_handler.setFormatter(FastSpineFormatter())
 
     # This makes sure DEBUG-level messages go to elastic if the root or model-specific log
     # level is set to DEBUG.

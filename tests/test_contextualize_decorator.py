@@ -3,14 +3,14 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from faststack.decorators.contextualize_decorator import with_contextualize
+from fastspine.decorators.contextualize_decorator import with_contextualize
 
 
 def test_with_contextualize_basic_functionality():
     """Test basic functionality of with_contextualize decorator."""
     mock_contextualize = MagicMock()
 
-    with patch("faststack.decorators.contextualize_decorator.contextualize", mock_contextualize):
+    with patch("fastspine.decorators.contextualize_decorator.contextualize", mock_contextualize):
 
         @with_contextualize()
         def sample_task(self):
@@ -35,7 +35,7 @@ def test_with_contextualize_without_self_name():
     """Test decorator when self.name is not available."""
     mock_contextualize = MagicMock()
 
-    with patch("faststack.decorators.contextualize_decorator.contextualize", mock_contextualize):
+    with patch("fastspine.decorators.contextualize_decorator.contextualize", mock_contextualize):
 
         @with_contextualize()
         def sample_task(self):
@@ -57,7 +57,7 @@ def test_with_contextualize_with_context_params_positional_args():
     """Test decorator with context params using positional arguments."""
     mock_contextualize = MagicMock()
 
-    with patch("faststack.decorators.contextualize_decorator.contextualize", mock_contextualize):
+    with patch("fastspine.decorators.contextualize_decorator.contextualize", mock_contextualize):
 
         @with_contextualize(input_list_id="input_list_id", task_id="request_id")
         def sample_task(self, input_list_id, request_id, extra_param):
@@ -82,7 +82,7 @@ def test_with_contextualize_with_context_params_keyword_args():
     """Test decorator with context params using keyword arguments."""
     mock_contextualize = MagicMock()
 
-    with patch("faststack.decorators.contextualize_decorator.contextualize", mock_contextualize):
+    with patch("fastspine.decorators.contextualize_decorator.contextualize", mock_contextualize):
 
         @with_contextualize(input_list_id="input_list_id", task_id="request_id")
         def sample_task(self, input_list_id, request_id, extra_param=None):
@@ -106,7 +106,7 @@ def test_with_contextualize_mixed_args():
     """Test decorator with mixed positional and keyword arguments."""
     mock_contextualize = MagicMock()
 
-    with patch("faststack.decorators.contextualize_decorator.contextualize", mock_contextualize):
+    with patch("fastspine.decorators.contextualize_decorator.contextualize", mock_contextualize):
 
         @with_contextualize(input_list_id="input_list_id", task_id="request_id")
         def sample_task(self, input_list_id, request_id, extra_param=None):
@@ -130,7 +130,7 @@ def test_with_contextualize_param_not_in_function_signature():
     """Test decorator when context param is not in function signature."""
     mock_contextualize = MagicMock()
 
-    with patch("faststack.decorators.contextualize_decorator.contextualize", mock_contextualize):
+    with patch("fastspine.decorators.contextualize_decorator.contextualize", mock_contextualize):
 
         @with_contextualize(input_list_id="nonexistent_param")
         def sample_task(self, real_param):
@@ -155,7 +155,7 @@ def test_with_contextualize_insufficient_positional_args():
     """Test decorator when not enough positional arguments are provided."""
     mock_contextualize = MagicMock()
 
-    with patch("faststack.decorators.contextualize_decorator.contextualize", mock_contextualize):
+    with patch("fastspine.decorators.contextualize_decorator.contextualize", mock_contextualize):
 
         @with_contextualize(input_list_id="input_list_id", task_id="request_id")
         def sample_task(self, input_list_id, request_id=None):
@@ -191,7 +191,7 @@ def test_with_contextualize_correlation_id_uniqueness():
     """Test that each call generates a unique correlation_id."""
     mock_contextualize = MagicMock()
 
-    with patch("faststack.decorators.contextualize_decorator.contextualize", mock_contextualize):
+    with patch("fastspine.decorators.contextualize_decorator.contextualize", mock_contextualize):
 
         @with_contextualize()
         def sample_task(self):
@@ -217,7 +217,7 @@ def test_with_contextualize_uuid_format():
     """Test that correlation_id is a valid UUID string."""
     mock_contextualize = MagicMock()
 
-    with patch("faststack.decorators.contextualize_decorator.contextualize", mock_contextualize):
+    with patch("fastspine.decorators.contextualize_decorator.contextualize", mock_contextualize):
 
         @with_contextualize()
         def sample_task(self):
@@ -241,7 +241,7 @@ def test_with_contextualize_context_manager_usage():
     mock_context = MagicMock()
     mock_contextualize.return_value = mock_context
 
-    with patch("faststack.decorators.contextualize_decorator.contextualize", mock_contextualize):
+    with patch("fastspine.decorators.contextualize_decorator.contextualize", mock_contextualize):
 
         @with_contextualize()
         def sample_task(self):
@@ -263,7 +263,7 @@ def test_with_contextualize_exception_handling():
     mock_context = MagicMock()
     mock_contextualize.return_value = mock_context
 
-    with patch("faststack.decorators.contextualize_decorator.contextualize", mock_contextualize):
+    with patch("fastspine.decorators.contextualize_decorator.contextualize", mock_contextualize):
 
         @with_contextualize()
         def failing_task(self):
@@ -284,7 +284,7 @@ def test_with_contextualize_no_context_params():
     """Test decorator without any context parameters."""
     mock_contextualize = MagicMock()
 
-    with patch("faststack.decorators.contextualize_decorator.contextualize", mock_contextualize):
+    with patch("fastspine.decorators.contextualize_decorator.contextualize", mock_contextualize):
 
         @with_contextualize()
         def sample_task(self, param1, param2):

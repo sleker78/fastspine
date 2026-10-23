@@ -1,6 +1,6 @@
-# FastStack
+# FastSpine
 
-FastStack is a Python framework built on top of FastAPI that provides a service-repository
+FastSpine is a Python framework built on top of FastAPI that provides a service-repository
 architecture, dependency injection, caching, and supporting infrastructure (database sessions, Celery
 tasks, Alembic migrations, Redis, mailer) for building backend applications.
 
@@ -30,7 +30,7 @@ This runs `uv sync --group dev`, installing the project and its development depe
 
 ### Dependency injection
 
-FastStack provides two parallel sets of dependency helpers for every layer:
+FastSpine provides two parallel sets of dependency helpers for every layer:
 
 - `*_dep` / `get_*` factories (e.g. `service_dep`, `get_repository`, `get_repository_manager`) —
   build FastAPI `Depends()`-compatible callables for use inside request handlers.
@@ -40,37 +40,37 @@ FastStack provides two parallel sets of dependency helpers for every layer:
 
 ### Caching
 
-Decorators in `faststack.cache` (`cache_response`, `cache_method`, `cache_method_async`) cache
+Decorators in `fastspine.cache` (`cache_response`, `cache_method`, `cache_method_async`) cache
 function results in Redis, with support for cache-key building, distributed locking to avoid
 cache-stampede, and pluggable encoders.
 
 ### Other building blocks
 
-- `faststack.database` — engine/session configuration for sync and async SQLAlchemy sessions.
-- `faststack.celery` — base Celery task class integrated with the session/DI lifecycle.
-- `faststack.alembic` — helpers for running Alembic migrations.
-- `faststack.redis` — Redis client setup.
-- `faststack.mailer` — email sending via `fastapi-mail`.
-- `faststack.ctx` — context-local storage pool used throughout the framework for request/session
+- `fastspine.database` — engine/session configuration for sync and async SQLAlchemy sessions.
+- `fastspine.celery` — base Celery task class integrated with the session/DI lifecycle.
+- `fastspine.alembic` — helpers for running Alembic migrations.
+- `fastspine.redis` — Redis client setup.
+- `fastspine.mailer` — email sending via `fastapi-mail`.
+- `fastspine.ctx` — context-local storage pool used throughout the framework for request/session
   scoping.
 
 ## Getting started
 
-This walks through wiring up a new application on top of FastStack: bootstrapping the app,
+This walks through wiring up a new application on top of FastSpine: bootstrapping the app,
 registering databases, and defining repositories and services.
 
-### 1. Bootstrap the app with `FastStackApp`
+### 1. Bootstrap the app with `FastSpineApp`
 
-Instead of instantiating `fastapi.FastAPI` directly, use `FastStackApp`. It accepts every keyword
+Instead of instantiating `fastapi.FastAPI` directly, use `FastSpineApp`. It accepts every keyword
 argument `FastAPI()` does, plus `settings` (your app's settings instance) and `use_asgi_middleware`
 (set to `True` to use the ASGI-native middleware variants, required for streaming responses):
 
 ```python
-from faststack import FastStackApp
+from fastspine import FastSpineApp
 
 from myapp.settings import AppSettings  # your pydantic_settings.BaseSettings subclass
 
-app = FastStackApp(settings=AppSettings(), title="My App")
+app = FastSpineApp(settings=AppSettings(), title="My App")
 ```
 
 ### 2. Configure settings with a `DBConfig` per database
@@ -82,7 +82,7 @@ the connection is async (`DBConfig.async_mode` is derived automatically from it)
 ```python
 from pydantic_settings import BaseSettings
 
-from faststack.database.engine import DBConfig, DBServices
+from fastspine.database.engine import DBConfig, DBServices
 
 
 class AppSettings(BaseSettings):
@@ -136,8 +136,8 @@ module (e.g. `myapp/bootstrap.py`):
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 
-from faststack import RepositoryManager
-from faststack.dependencies.database import register_sessions
+from fastspine import RepositoryManager
+from fastspine.dependencies.database import register_sessions
 
 from myapp.settings import settings
 
@@ -177,12 +177,12 @@ state.
 ### 4. Define repositories
 
 Use `BaseRepository[Model]` for repositories backed by your own Alembic-tracked SQLAlchemy models
-(subclassing FastStack's declarative `Base`), and `ExternalBaseRepository` for repositories that
+(subclassing FastSpine's declarative `Base`), and `ExternalBaseRepository` for repositories that
 talk to a database you don't own/migrate (raw queries, no ORM models):
 
 ```python
-from faststack import BaseRepository, ExternalBaseRepository
-from faststack.models.base import Base
+from fastspine import BaseRepository, ExternalBaseRepository
+from fastspine.models.base import Base
 
 
 class Order(Base):
@@ -204,17 +204,17 @@ class ReportingRepository(ExternalBaseRepository):
 
 `BaseRepository[Model]` works against *any* database your `RepositoryManager` is wired to, not just
 the "primary" one — the model just has to be mapped as a SQLAlchemy declarative class (subclassing
-FastStack's `Base`). Use it for a reporting-database table too if that table happens to have a model;
+FastSpine's `Base`). Use it for a reporting-database table too if that table happens to have a model;
 reach for `ExternalBaseRepository` when you want to query without maintaining a mapped model at all.
 
 ### 5. Define services that depend on one or more repository managers
 
 A `BaseService` subclass declares the repository managers (and/or other services) it needs as
-constructor parameters, typed by the manager class. FastStack's DI resolves and injects them. A
+constructor parameters, typed by the manager class. FastSpine's DI resolves and injects them. A
 service isn't limited to one manager — depend on as many as the use case needs:
 
 ```python
-from faststack import BaseService
+from fastspine import BaseService
 
 
 class OrderSyncService(BaseService):
@@ -242,7 +242,7 @@ from typing import Annotated
 
 from fastapi import Depends
 
-from faststack import service_dep
+from fastspine import service_dep
 
 OrderSyncServiceDep = Annotated[OrderSyncService, Depends(service_dep(OrderSyncService))]
 
@@ -255,7 +255,7 @@ Outside of FastAPI's request lifecycle (CLI commands, Celery tasks), use `load_s
 which resolves the same dependency graph eagerly:
 
 ```python
-from faststack import load_service
+from fastspine import load_service
 
 def run_sync_job():
     service = load_service(OrderSyncService)
@@ -273,7 +273,7 @@ to own that scope explicitly.
 returns (success or exception):
 
 ```python
-from faststack.cli.scoped_typer import ScopedTyper
+from fastspine.cli.scoped_typer import ScopedTyper
 
 app = ScopedTyper()
 
@@ -284,14 +284,14 @@ async def sync_orders():
     service.sync()
 ```
 
-**Celery** — subclass `faststack.celery.base_task.BaseTask`; it clears stale per-task state before
+**Celery** — subclass `fastspine.celery.base_task.BaseTask`; it clears stale per-task state before
 each task runs and closes any repository manager sessions the task opened once it finishes (success
 or failure) — the same scope `command_scope` provides for CLI commands, adapted to Celery's signal
 lifecycle:
 
 ```python
 from myapp.celery_app import celery_app
-from faststack.celery.base_task import BaseTask
+from fastspine.celery.base_task import BaseTask
 
 
 @celery_app.task(base=BaseTask)

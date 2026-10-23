@@ -4,8 +4,8 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 
-from faststack.dependencies import database as database_module
-from faststack.dependencies.repository_manager import (
+from fastspine.dependencies import database as database_module
+from fastspine.dependencies.repository_manager import (
     _close_sessions,
     _close_sessions_sync,
     _repo_manager_cache_var,

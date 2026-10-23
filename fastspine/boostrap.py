@@ -7,7 +7,7 @@ from .exception.exception_handler import value_error_handler
 from .settings import CoreSettings, init_core_settings
 
 
-class FastStackApp(FastAPI):
+class FastSpineApp(FastAPI):
     """A FastAPI application with core settings and middleware."""
 
     def __init__(

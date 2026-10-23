@@ -1,7 +1,7 @@
 import uuid
 from functools import wraps
 
-from faststack.lib.contextualize import contextualize
+from fastspine.lib.contextualize import contextualize
 
 from ..util.class_util import function_parameters
 

@@ -2,11 +2,11 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 
-from faststack.database.engine import DBConfig, DBServices
-from faststack.dependencies import database as database_module
-from faststack.dependencies import repository_manager as repository_manager_module
-from faststack.repositories.repository_manager import RepositoryManager
-from faststack.settings import init_core_settings
+from fastspine.database.engine import DBConfig, DBServices
+from fastspine.dependencies import database as database_module
+from fastspine.dependencies import repository_manager as repository_manager_module
+from fastspine.repositories.repository_manager import RepositoryManager
+from fastspine.settings import init_core_settings
 
 
 @pytest.fixture(autouse=True, scope="session")

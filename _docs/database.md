@@ -1,6 +1,6 @@
 # Database
 
-Wiring a database into a FastStack app has four pieces, each with its own place:
+Wiring a database into a FastSpine app has four pieces, each with its own place:
 
 1. **Settings** — connection fields + a `DBConfig` per database, on your own settings class.
 2. **`RepositoryManager` classes** — one per database, all in **one file**.
@@ -20,7 +20,7 @@ as a property:
 ```python
 # myapp/settings.py
 from pydantic_settings import BaseSettings
-from faststack.database.engine import DBConfig, DBServices
+from fastspine.database.engine import DBConfig, DBServices
 
 
 class AppSettings(BaseSettings):
@@ -60,7 +60,7 @@ Each database gets its own `RepositoryManager` subclass, generic over the sessio
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 
-from faststack import RepositoryManager
+from fastspine import RepositoryManager
 
 
 class PrimaryRepositoryManager(RepositoryManager[AsyncSession]):
@@ -72,7 +72,7 @@ class ReportingRepositoryManager(RepositoryManager[Session]):
 ```
 
 **Put every `RepositoryManager` subclass in this one file** (call it `sessions.py`, `db.py`,
-whatever you like - the filename is not a FastStack convention, just pick one and be consistent).
+whatever you like - the filename is not a FastSpine convention, just pick one and be consistent).
 Reasons this matters in practice, not just tidiness:
 
 - Repositories and services import these classes directly (as type hints), from all over your
@@ -93,8 +93,8 @@ A `RepositoryManager` class isn't usable until it's registered to an actual data
 Do that once, as an import-time side effect, in a small dedicated module:
 
 ```python
-# myapp/bootstrap.py  -- "bootstrap" is just a name, not required by FastStack; see below
-from faststack.dependencies.database import register_sessions
+# myapp/bootstrap.py  -- "bootstrap" is just a name, not required by FastSpine; see below
+from fastspine.dependencies.database import register_sessions
 
 from myapp.db.sessions import PrimaryRepositoryManager, ReportingRepositoryManager
 from myapp.settings import settings
@@ -105,7 +105,7 @@ register_sessions([
 ])
 ```
 
-**The module name (`bootstrap.py`) is pure convention - FastStack doesn't look for a file by that
+**The module name (`bootstrap.py`) is pure convention - FastSpine doesn't look for a file by that
 name or import it for you.** Call it whatever fits your project; what matters is:
 
 - It calls `register_sessions(...)` (or the singular `register_session`/`register_async_session`)
@@ -133,14 +133,14 @@ registration module at all (repositories/services never import `myapp.bootstrap`
 ### Repositories
 
 - **`BaseRepository[Model]`** - for a table you own and migrate (an Alembic-tracked SQLAlchemy
-  model, subclassing FastStack's declarative `Base`). Gives you `sync_get_by_id`, `sync_filter_by`,
+  model, subclassing FastSpine's declarative `Base`). Gives you `sync_get_by_id`, `sync_filter_by`,
   `sync_create`, soft-delete helpers, and their async counterparts, for free.
 - **`ExternalBaseRepository`** - for querying a database you don't own/migrate, with no mapped
   model - raw SQL via `fetch_list`/`fetchone`/`fetch_dataframe`/etc.
 
 ```python
-from faststack import BaseRepository, ExternalBaseRepository
-from faststack.models.base import Base
+from fastspine import BaseRepository, ExternalBaseRepository
+from fastspine.models.base import Base
 
 
 class Order(Base):
@@ -181,10 +181,10 @@ actually an `AsyncSession`).
 ### Services depend on one or more repository managers
 
 A `BaseService` subclass declares the managers (and/or other services) it needs as constructor
-parameters, typed by the manager class - FastStack's DI resolves and injects them:
+parameters, typed by the manager class - FastSpine's DI resolves and injects them:
 
 ```python
-from faststack import BaseService
+from fastspine import BaseService
 
 class OrderSyncService(BaseService):
     """Syncs order data between the primary database and the reporting database."""
@@ -202,5 +202,5 @@ Inject it into a FastAPI route with `Depends(service_dep(OrderSyncService))`, or
 outside a request (CLI, Celery) with `load_service(OrderSyncService)` - both resolve the same
 constructor dependencies, just at different times. See the
 [README](../README.md#6-use-the-service) for the full DI picture, and [CLI](cli.md) /
-`faststack.celery.base_task.BaseTask` for how sessions opened this way get closed outside a
+`fastspine.celery.base_task.BaseTask` for how sessions opened this way get closed outside a
 FastAPI request.
