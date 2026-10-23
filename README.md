@@ -1,6 +1,6 @@
 # FastStack
 
-FastStack is an Python framework built on top of FastAPI that provides a service-repository
+FastStack is a Python framework built on top of FastAPI that provides a service-repository
 architecture, dependency injection, caching, and supporting infrastructure (database sessions, Celery
 tasks, Alembic migrations, Redis, mailer) for building backend applications.
 
