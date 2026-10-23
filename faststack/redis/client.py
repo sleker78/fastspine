@@ -10,7 +10,7 @@ from ..settings import get_core_settings
 def get_redis_client() -> Redis | None:
     """Get the Redis client instance."""
     if get_core_settings().CACHE_ENABLED:
-        return Redis.from_url(get_core_settings().CELERY_BROKER_URI)
+        return Redis.from_url(get_core_settings().get_redis_url())
 
     return None
 
@@ -19,5 +19,5 @@ def get_redis_client() -> Redis | None:
 def get_sync_redis_client() -> SyncRedis | None:
     """Get the synchronous Redis client instance."""
     if get_core_settings().CACHE_ENABLED:
-        return SyncRedis.from_url(get_core_settings().CELERY_BROKER_URI)
+        return SyncRedis.from_url(get_core_settings().get_redis_url())
     return None

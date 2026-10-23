@@ -18,8 +18,8 @@ level here degrades to "just call the underlying function" rather than raising.
 ## Running Redis locally
 
 FastStack already depends on `redis` (the Python client) - there's nothing extra to install on the
-Python side. You just need a Redis *server* reachable at whatever URL you put in
-`CELERY_BROKER_URI`. For local development, the quickest way is Docker:
+Python side. You just need a Redis *server* reachable at whatever `REDIS_HOST`/`REDIS_PORT` you
+configure. For local development, the quickest way is Docker:
 
 ```bash
 docker run -d --name redis -p 6379:6379 redis:7-alpine
@@ -28,23 +28,26 @@ docker run -d --name redis -p 6379:6379 redis:7-alpine
 Then point your settings at it:
 
 ```python
-CELERY_BROKER_URI = "redis://localhost:6379/0"
+REDIS_HOST = "localhost"
+REDIS_PORT = 6379
 CACHE_ENABLED = True
 ```
 
-That's it - no extra setup, no schema/migrations, nothing to register. Once those two settings are
-in place, every decorator and `CacheService` method in this doc works as described. If you don't
-have a Redis instance available (or set `CACHE_ENABLED=False`), everything degrades gracefully to
+That's it - no extra setup, no schema/migrations, nothing to register. Once those settings are in
+place, every decorator and `CacheService` method in this doc works as described. If you don't have
+a Redis instance available (or set `CACHE_ENABLED=False`), everything degrades gracefully to
 "never cache" rather than failing, so local development without Docker still works, just without
 caching.
 
 ## Connection
 
 `faststack.redis.client.get_redis_client()`/`get_sync_redis_client()` build the Redis clients
-(async and sync respectively) that everything else uses, from `CELERY_BROKER_URI` — **not** the
-`REDIS_HOST`/`REDIS_PORT`/etc. fields (those are currently unused; see the note in
-[Configuration](configuration.md#cache-settings)). Both getters are `@lru_cache`d and return `None`
-when `CACHE_ENABLED` is `False`.
+(async and sync respectively) that everything else uses, from `CacheSettings.get_redis_url()` - i.e. the
+`REDIS_USER`/`REDIS_PASSWORD`/`REDIS_HOST`/`REDIS_PORT` fields, not `CELERY_BROKER_URI`. This is
+intentionally a separate connection target from Celery's broker (see the note in
+[Configuration](configuration.md#cache-settings)) - point both at the same Redis instance if you
+only want to run one. Both getters are `@lru_cache`d and return `None` when `CACHE_ENABLED` is
+`False`.
 
 Constructing a client (`Redis.from_url(...)`) never touches the network - it's lazy, like all of
 redis-py. A Redis outage only ever surfaces at the point something is actually sent (`.get()`,

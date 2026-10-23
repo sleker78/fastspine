@@ -6,7 +6,7 @@ from pydantic_settings import BaseSettings
 from ..settings import CoreSettings, get_core_settings, init_core_settings
 
 
-def get_celery_instance(settings: BaseSettings) -> Celery:
+def get_celery_instance(settings: BaseSettings, *kwargs) -> Celery:
     """Get the Celery instance with the core settings."""
     core_settings: CoreSettings = init_core_settings(settings=settings)
 
@@ -22,6 +22,7 @@ def get_celery_instance(settings: BaseSettings) -> Celery:
         result_expires=core_settings.CELERY_RESULT_EXPIRES,
         broker_connection_retry_on_startup=False,
         config_source=Config,
+        **kwargs,
     )
 
 

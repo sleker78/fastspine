@@ -69,25 +69,26 @@ Redis connection details plus the global cache on/off switch. Used by `faststack
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `REDIS_USER` | `str` | `""` | Redis username, used by `CacheSettings.get_url()`. |
-| `REDIS_PASSWORD` | `str` | `""` | Redis password, used by `CacheSettings.get_url()`. |
-| `REDIS_HOST` | `str` | `"localhost"` | Redis host, used by `CacheSettings.get_url()`. |
-| `REDIS_PORT` | `int` | `6397` | Redis port, used by `CacheSettings.get_url()`. |
+| `REDIS_USER` | `str` | `""` | Redis username, used by `CacheSettings.get_redis_url()`. |
+| `REDIS_PASSWORD` | `str` | `""` | Redis password, used by `CacheSettings.get_redis_url()`. |
+| `REDIS_HOST` | `str` | `"localhost"` | Redis host, used by `CacheSettings.get_redis_url()`. |
+| `REDIS_PORT` | `int` | `6379` | Redis port, used by `CacheSettings.get_redis_url()`. |
 | `CACHE_ENABLED` | `bool` | `True` | Global cache on/off switch. When `False`, `get_redis_client()`/`get_sync_redis_client()` return `None`, and every cache helper degrades to a no-op (cache miss on read, no-op on write) instead of touching Redis. |
 | `CACHE_KEY_PREFIX` | `str \| None` | `None` | Prefix used when building Celery task dedupe keys in `BaseTask.generate_unique_task_id`. Not used by the `faststack.cache` decorators themselves (they build their own keys via `KeyBuilder`). |
 | `CACHED_DISABLED_USERS` | `list[str]` | `[]` | Email addresses for which caching is force-disabled, checked by `set_cache_enabled(user_email)` (wired up by `RequestMiddleware`, keyed off the authenticated user). |
 
-**Note:** `CacheSettings.get_url()` builds a `redis://user:password@host:port` URL from the four
-`REDIS_*` fields above, but it's currently unused elsewhere in the framework — the actual Redis
-clients (`faststack.redis.client.get_redis_client`/`get_sync_redis_client`) connect using
-`CELERY_BROKER_URI` (below) instead, not this URL. If you rely on `REDIS_HOST`/`REDIS_PORT`/etc.
-actually being used to connect, point `CELERY_BROKER_URI` at the same Redis instance.
+**Note:** `CacheSettings.get_redis_url()` builds a `redis://user:password@host:port` URL from the four
+`REDIS_*` fields above - this is what `faststack.redis.client.get_redis_client`/
+`get_sync_redis_client` actually connect to. It's intentionally separate from `CELERY_BROKER_URI`
+(below): caching and Celery's broker can point at the same Redis instance or two different ones,
+your choice. If you only run one Redis instance for both, set `REDIS_HOST`/`REDIS_PORT`/etc. *and*
+`CELERY_BROKER_URI` to point at it.
 
 ## Celery settings
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `CELERY_BROKER_URI` | `str` | `""` | Redis connection URL. This is what `get_redis_client()`/`get_sync_redis_client()` actually connect to — despite the name, it's the URL used for both the cache layer and Celery's broker. Must be a `redis://`, `rediss://`, or `unix://` URL (empty string fails to parse). |
+| `CELERY_BROKER_URI` | `str` | `""` | Celery broker connection URL. Only used by Celery (`faststack.celery.engine`) - the cache layer connects via `CacheSettings.get_redis_url()`/`REDIS_*` (above) instead, not this field. Must be a `redis://`, `rediss://`, or `unix://` URL (empty string fails to parse). |
 | `CELERY_BACKEND_URI` | `str` | `"redis://localhost:6385/0"` | Celery result backend URL. |
 | `CELERY_RESULT_EXPIRES` | `int` | `604800` (7 days, in seconds) | How long Celery keeps task results around. |
 | `CELERY_MAIN_NAME` | `str` | `"_redis_main"` | Name of the main Celery app instance. |

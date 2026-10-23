@@ -238,12 +238,16 @@ class OrderSyncService(BaseService):
 Inside a FastAPI route, inject it with `service_dep`:
 
 ```python
+from typing import Annotated
+
 from fastapi import Depends
 
 from faststack import service_dep
 
+OrderSyncServiceDep = Annotated[OrderSyncService, Depends(service_dep(OrderSyncService))]
+
 @app.post("/orders/sync")
-def sync_orders(service: OrderSyncService = Depends(service_dep(OrderSyncService))):
+def sync_orders(service: OrderSyncServiceDep):
     service.sync()
 ```
 
@@ -312,6 +316,8 @@ import state.
   low-level `redis_cache` functions underneath all of them.
 - [CLI](_docs/cli.md) — `ScopedTyper`/`command_scope`, and why CLI commands need their own
   repository-manager lifecycle (there's no `Depends()` to open/close sessions for you).
+- [Celery](_docs/celery.md) — `BaseTask` (dedup, session cleanup, failure fallback), and how to
+  run the worker in dev vs. prod.
 
 ## Development
 

@@ -8,13 +8,13 @@ class CacheSettings:
 
     REDIS_USER: str = ""
     REDIS_PASSWORD: str = ""
-    REDIS_PORT: int = 6397
+    REDIS_PORT: int = 6379
     REDIS_HOST: str = "localhost"
     CACHE_ENABLED: bool = True
     CACHE_KEY_PREFIX: str | None = None
     CACHED_DISABLED_USERS: list[str] = []
 
-    def get_url(self):
+    def get_redis_url(self):
         """Construct the Redis URL from the settings."""
         return f"redis://{self.REDIS_USER}:{self.REDIS_PASSWORD}@{self.REDIS_HOST}:{self.REDIS_PORT}"
 
