@@ -1,10 +1,11 @@
 [project]
 name = "FastStack"
-version = "0.1.0"
-description = ""
+version = "1.0.0"
+description = "FastAPI framework with a service-repository architecture, dependency injection, Redis caching and SQLAlchemy, Celery and Alembic integration."
 authors = [
-    {name = "Aleksandar Pavlovic", email = "pavlovic@mdpi.com"}
+    {name = "Aleksandar Pavlovic", email = "sleker@gmail.com"}
 ]
+license = "MIT"
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
 dependencies = [
