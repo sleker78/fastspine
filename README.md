@@ -307,6 +307,8 @@ import state.
 
 ## Further documentation
 
+- [Full example](_docs/example.md) — one database, one model, one repository, one service, Redis
+  caching, no Celery - every piece from the docs below wired together into one small running app.
 - [Database](_docs/database.md) — settings → `RepositoryManager` classes → registration →
   repositories/services, including why manager classes belong in one file and registration in
   another (and that "bootstrap" is just a name, not a requirement).
