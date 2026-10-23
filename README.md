@@ -307,18 +307,18 @@ import state.
 
 ## Further documentation
 
-- [Full example](_docs/example.md) — one database, one model, one repository, one service, Redis
+- [Full example](https://github.com/sleker78/fastspine/blob/main/_docs/example.md) — one database, one model, one repository, one service, Redis
   caching, no Celery - every piece from the docs below wired together into one small running app.
-- [Database](_docs/database.md) — settings → `RepositoryManager` classes → registration →
+- [Database](https://github.com/sleker78/fastspine/blob/main/_docs/database.md) — settings → `RepositoryManager` classes → registration →
   repositories/services, including why manager classes belong in one file and registration in
   another (and that "bootstrap" is just a name, not a requirement).
-- [Configuration](_docs/configuration.md) — every `CoreSettings` field (app, cache, Celery,
+- [Configuration](https://github.com/sleker78/fastspine/blob/main/_docs/configuration.md) — every `CoreSettings` field (app, cache, Celery,
   profiler, mailer) and `DBConfig`, with defaults and what each one actually controls.
-- [Caching](_docs/caching.md) — the decorators, `CacheService`/`CachableModel`, encoders, and the
+- [Caching](https://github.com/sleker78/fastspine/blob/main/_docs/caching.md) — the decorators, `CacheService`/`CachableModel`, encoders, and the
   low-level `redis_cache` functions underneath all of them.
-- [CLI](_docs/cli.md) — `ScopedTyper`/`command_scope`, and why CLI commands need their own
+- [CLI](https://github.com/sleker78/fastspine/blob/main/_docs/cli.md) — `ScopedTyper`/`command_scope`, and why CLI commands need their own
   repository-manager lifecycle (there's no `Depends()` to open/close sessions for you).
-- [Celery](_docs/celery.md) — `BaseTask` (dedup, session cleanup, failure fallback), and how to
+- [Celery](https://github.com/sleker78/fastspine/blob/main/_docs/celery.md) — `BaseTask` (dedup, session cleanup, failure fallback), and how to
   run the worker in dev vs. prod.
 
 ## Development
@@ -337,4 +337,4 @@ make check              # Run test, ruff-formatter, ruff, deptry and mypy
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT — see [LICENSE](https://github.com/sleker78/fastspine/blob/main/LICENSE).
