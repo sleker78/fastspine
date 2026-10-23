@@ -62,6 +62,7 @@ exclude = ["docs", ".venv", "venv", "node_modules", "__pycache__", ".git", ".uv-
 [tool.deptry.per_rule_ignores]
 DEP002 = ["openpyxl", "aiomysql", "asyncpg", "greenlet", "typer"]
 DEP003 = ["httpx"]
+DEP004 = ["pytest_asyncio"]
 
 [tool.mypy]
 ignore_missing_imports = true

@@ -3,7 +3,7 @@ from typing import List
 import pytest
 from pydantic import BaseModel
 
-from ..util.class_util import (
+from faststack.util.class_util import (
     first_parameter_type,
     function_parameters,
     get_annotations,

@@ -1,6 +1,6 @@
 import pytest
 
-from ..util.emails import is_valid_email
+from faststack.util.emails import is_valid_email
 
 
 @pytest.mark.parametrize(

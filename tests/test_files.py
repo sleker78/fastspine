@@ -3,7 +3,7 @@ from io import BytesIO
 import pandas as pd
 import pytest
 
-from ..util.files import is_excel_file
+from faststack.util.files import is_excel_file
 
 
 @pytest.fixture

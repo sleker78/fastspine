@@ -14,6 +14,8 @@ from .redis_cache import cache_get, cache_set, lock, sync_cache_get, sync_cache_
 
 T = TypeVar("T", bound=Callable[..., Any])
 
+_UNSET = object()  # distinguishes "handler not called yet" from a legitimate `None` result
+
 
 def _log_cache_hit(function_name: str, cache_key: str) -> None:
     profiler = fetch_profiler()
@@ -76,6 +78,7 @@ def cache_response(
 
             acquired = False
             try:
+                result = _UNSET
                 if request.headers.get("X-Cache-Bypass") == "true":
                     result = await func(*args, **kwargs)
                     await cache_set(cache_key, result, int(expire_seconds), CacheResponseEncoder)
@@ -101,6 +104,8 @@ def cache_response(
             except CacheError as e:
                 if not ignore_errors:
                     raise HTTPException(status_code=500, detail=f"Cache operation failed: {str(e)}") from e
+                if result is not _UNSET:
+                    return result  # Already computed - don't call the handler a second time
                 return await func(*args, **kwargs)
             finally:
                 if acquired:
@@ -146,6 +151,7 @@ def cache_method_async(
 
             acquired = False
             try:
+                result = _UNSET
                 cached = await cache_get(cache_key, PickledEncoder, use_compression=use_compression)
 
                 if cached is not None:
@@ -181,6 +187,8 @@ def cache_method_async(
                 # If cache fails, execute the original function
                 if log_cache_errors:
                     _log_cache_error(func.__name__, cache_key, e)
+                if result is not _UNSET:
+                    return result  # Already computed - don't call the handler a second time
                 return await func(*args, **kwargs)
             finally:
                 if acquired:
@@ -208,7 +216,6 @@ def cache_method(
         @wraps(func)
         def sync_wrapper(*args: Any, **kwargs: Any) -> Any:
             """Wrapper function to handle caching logic."""
-            result = None
             cache_key = KeyBuilder.key_builder(
                 func,
                 namespace=f"{key_prefix}:{version}",
@@ -221,6 +228,7 @@ def cache_method(
 
             acquired = False
             try:
+                result = _UNSET
                 cached = sync_cache_get(cache_key, PickledEncoder, use_compression=use_compression)
 
                 if cached is not None:
@@ -244,6 +252,8 @@ def cache_method(
             except CacheError as e:
                 if not ignore_errors:
                     raise HTTPException(status_code=500, detail=f"Cache operation failed: {str(e)}") from e
+                if result is not _UNSET:
+                    return result  # Already computed - don't call the handler a second time
                 return func(*args, **kwargs)
             finally:
                 if acquired:

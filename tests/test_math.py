@@ -1,4 +1,4 @@
-from ..util.math import clamp
+from faststack.util.math import clamp
 
 
 def test_clamp():

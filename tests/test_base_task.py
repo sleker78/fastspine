@@ -3,8 +3,8 @@ from unittest.mock import AsyncMock, Mock
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 
-from ..celery.base_task import BaseTask
-from ..dependencies.repository_manager import _repo_manager_cache_var
+from faststack.celery.base_task import BaseTask
+from faststack.dependencies.repository_manager import _repo_manager_cache_var
 
 
 class _FakeCeleryTask:

@@ -1,8 +1,8 @@
 import pytest
 
-from ..cache import redis_cache
-from ..cache.cache_encoder import PickledEncoder
-from ..cache.cache_exception import CacheError
+from faststack.cache import redis_cache
+from faststack.cache.cache_encoder import PickledEncoder
+from faststack.cache.cache_exception import CacheError
 
 
 class _FakeAsyncRedis:

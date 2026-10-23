@@ -3,7 +3,7 @@ from unittest.mock import Mock, call, patch
 import pytest
 from sqlalchemy.exc import OperationalError
 
-from ..decorators.upsert_decorator import upsert_decorator
+from faststack.decorators.upsert_decorator import upsert_decorator
 
 
 @pytest.fixture

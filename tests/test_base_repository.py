@@ -4,11 +4,11 @@ from sqlalchemy import create_engine
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import Mapped, Session, mapped_column
 
-from ..lib.profiler import Profiler
-from ..mixins import SoftDeleteMixin
-from ..models.base import Base
-from ..repositories.base_repository import BaseRepository
-from ..schemas.pagination_model import PaginationParams
+from faststack.lib.profiler import Profiler
+from faststack.mixins import SoftDeleteMixin
+from faststack.models.base import Base
+from faststack.repositories.base_repository import BaseRepository
+from faststack.schemas.pagination_model import PaginationParams
 
 
 class _Widget(Base):

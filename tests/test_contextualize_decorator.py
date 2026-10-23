@@ -3,7 +3,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from ..decorators.contextualize_decorator import with_contextualize
+from faststack.decorators.contextualize_decorator import with_contextualize
 
 
 def test_with_contextualize_basic_functionality():

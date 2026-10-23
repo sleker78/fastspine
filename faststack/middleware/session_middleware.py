@@ -11,11 +11,11 @@ class DBSessionMiddleware(BaseHTTPMiddleware):
 
     async def dispatch(self, request: Request, call_next):
         """Dispatch method for the middleware."""
-        response = await call_next(request)  # Process request
-
-        await _close_sessions()
-        ctxpool.clear()
-        return response
+        try:
+            return await call_next(request)  # Process request
+        finally:
+            await _close_sessions()
+            ctxpool.clear()
 
 
 class DBSessionMiddlewareASGI:

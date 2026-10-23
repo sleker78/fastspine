@@ -2,9 +2,9 @@ from unittest.mock import Mock
 
 import pytest
 
-from ..cache import cache_decorater, redis_cache
-from ..cache.cache_exception import CacheError
-from ..ctx.ctx_pool import ctxpool
+from faststack.cache import cache_decorater, redis_cache
+from faststack.cache.cache_exception import CacheError
+from faststack.ctx.ctx_pool import ctxpool
 
 
 class _FakeAsyncLock:
@@ -212,6 +212,29 @@ async def test_cache_response_runs_uncached_when_cache_is_disabled(cache_disable
     assert calls == 2
 
 
+@pytest.mark.asyncio
+async def test_cache_response_does_not_rerun_the_handler_if_caching_the_result_fails(fake_async_redis, monkeypatch):
+    """Regression test: a `cache_set` failure after the handler ran must not re-run the handler."""
+    ctxpool.set("request_context", _fake_request())
+    calls = 0
+
+    async def _raise(*args, **kwargs):
+        raise CacheError("boom")
+
+    monkeypatch.setattr(cache_decorater, "cache_set", _raise)
+
+    @cache_decorater.cache_response()
+    async def handler():
+        nonlocal calls
+        calls += 1
+        return {"value": calls}
+
+    result = await handler()
+
+    assert result == {"value": 1}
+    assert calls == 1
+
+
 # --- cache_method_async -----------------------------------------------------------------------
 
 
@@ -262,6 +285,26 @@ async def test_cache_method_async_falls_back_to_the_function_on_cache_error(fake
     assert await handler() == "fresh"
 
 
+@pytest.mark.asyncio
+async def test_cache_method_async_does_not_rerun_the_handler_if_caching_the_result_fails(fake_async_redis, monkeypatch):
+    """Regression test: a `cache_set` failure after the handler ran must not re-run the handler."""
+    calls = 0
+
+    async def _raise(*args, **kwargs):
+        raise CacheError("boom")
+
+    monkeypatch.setattr(cache_decorater, "cache_set", _raise)
+
+    @cache_decorater.cache_method_async()
+    async def handler():
+        nonlocal calls
+        calls += 1
+        return calls
+
+    assert await handler() == 1
+    assert calls == 1
+
+
 # --- cache_method (sync) ----------------------------------------------------------------------
 
 
@@ -292,3 +335,22 @@ def test_cache_method_runs_uncached_when_cache_is_disabled(cache_disabled):
 
     assert handler() == 1
     assert handler() == 2
+
+
+def test_cache_method_does_not_rerun_the_handler_if_caching_the_result_fails(fake_sync_redis, monkeypatch):
+    """Regression test: a `sync_cache_set` failure after the handler ran must not re-run the handler."""
+    calls = 0
+
+    def _raise(*args, **kwargs):
+        raise CacheError("boom")
+
+    monkeypatch.setattr(cache_decorater, "sync_cache_set", _raise)
+
+    @cache_decorater.cache_method()
+    def handler():
+        nonlocal calls
+        calls += 1
+        return calls
+
+    assert handler() == 1
+    assert calls == 1
