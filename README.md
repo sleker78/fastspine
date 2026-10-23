@@ -1,6 +1,6 @@
 # FastStack
 
-FastStack is an internal Python framework built on top of FastAPI that provides a service-repository
+FastStack is an Python framework built on top of FastAPI that provides a service-repository
 architecture, dependency injection, caching, and supporting infrastructure (database sessions, Celery
 tasks, Alembic migrations, Redis, mailer) for building backend applications.
 
@@ -317,4 +317,4 @@ make check              # Run test, ruff-formatter, ruff, deptry and mypy
 
 ## License
 
-Internal/proprietary — not published to a public package index.
+MIT — see [LICENSE](LICENSE).
