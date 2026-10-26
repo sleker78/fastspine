@@ -1,6 +1,6 @@
 [project]
 name = "FastSpine"
-version = "1.0.1"
+version = "1.1.0"
 description = "FastAPI framework with a service-repository architecture, dependency injection, Redis caching and SQLAlchemy, Celery and Alembic integration."
 authors = [
     {name = "Aleksandar Pavlovic", email = "sleker@gmail.com"}
