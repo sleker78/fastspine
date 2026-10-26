@@ -21,6 +21,12 @@ myapp/
   main.py
 ```
 
+This app needs an async Postgres driver and the Redis client, both optional extras:
+
+```bash
+pip install "fastspine[postgres,redis]"
+```
+
 ## 1. Settings
 
 One `DBConfig` for the one database, plus caching - both come from the same settings object (see
@@ -141,7 +147,8 @@ read method with `cache_method_async` (per [Caching](caching.md#decorators)):
 # myapp/services/order_service.py
 from datetime import timedelta
 
-from fastspine import BaseService, cache_method_async
+from fastspine import BaseService
+from fastspine.cache.cache_decorater import cache_method_async
 
 from myapp.db.sessions import AppRepositoryManager
 from myapp.models.order import Order

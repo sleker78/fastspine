@@ -15,7 +15,32 @@ tasks, Alembic migrations, Redis, mailer) for building backend applications.
 make install
 ```
 
-This runs `uv sync --group dev`, installing the project and its development dependencies.
+This runs `uv sync --group dev --all-extras`, installing the project, its development
+dependencies, and every optional extra (so the full test suite runs locally).
+
+### Optional extras
+
+Only `fastapi`, `pydantic`, `sqlalchemy`, and the other always-needed pieces are installed by
+default - everything that talks to a specific external system is an extra, so you only pull in
+what your app actually uses:
+
+| Extra | Installs | Needed for |
+|---|---|---|
+| `postgres` | `asyncpg`, `psycopg2-binary` | `DBServices.POSTGRES`/`ASYNC_POSTGRES` |
+| `mysql` | `aiomysql`, `pymysql` | `DBServices.MYSQL`/`ASYNC_MYSQL` |
+| `redis` | `redis` | `fastspine.cache` (decorators, `CacheService`) |
+| `celery` | `celery`, `redis` | `fastspine.celery` (`BaseTask`, `get_celery_instance`) |
+| `mailer` | `fastapi-mail` | `fastspine.mailer` |
+| `cli` | `typer` | `fastspine.cli.scoped_typer` |
+| `all` | everything above | local development, or if you just want it all |
+
+```bash
+pip install "fastspine[postgres,redis]"   # e.g. a FastAPI app on Postgres with caching, no Celery
+```
+
+`import fastspine` itself never requires any of these - only the specific submodule that uses a
+given integration does (e.g. `fastspine.celery.base_task` needs the `celery` extra;
+`fastspine.cache.cache_decorater` needs `redis`).
 
 ## Core concepts
 

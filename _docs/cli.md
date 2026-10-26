@@ -4,6 +4,14 @@
 the same repository-manager lifecycle that FastAPI gives a request: open sessions lazily as
 they're used, close everything once the command is done - whether it succeeded or raised.
 
+`typer` is an optional extra - install it with:
+
+```bash
+pip install "fastspine[cli]"
+```
+
+`import fastspine` works without it; only `fastspine.cli.scoped_typer` itself needs it.
+
 ## The problem this solves
 
 Inside a FastAPI route, `Depends()` opens a repository manager's session when a handler first

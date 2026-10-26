@@ -17,9 +17,13 @@ level here degrades to "just call the underlying function" rather than raising.
 
 ## Running Redis locally
 
-FastSpine already depends on `redis` (the Python client) - there's nothing extra to install on the
-Python side. You just need a Redis *server* reachable at whatever `REDIS_HOST`/`REDIS_PORT` you
-configure. For local development, the quickest way is Docker:
+Caching needs the `redis` Python client, which is an optional extra - install with
+`pip install fastspine[redis]` (or add `redis` to your own dependencies directly). Without it,
+`fastspine` itself still imports fine - only `fastspine.cache.cache_decorater`/`cache_service`/
+`redis_cache` (and anything importing them) raise `ModuleNotFoundError` when actually used.
+
+Beyond that Python-side package, you also need a Redis *server* reachable at whatever
+`REDIS_HOST`/`REDIS_PORT` you configure. For local development, the quickest way is Docker:
 
 ```bash
 docker run -d --name redis -p 6379:6379 redis:7-alpine
@@ -62,7 +66,7 @@ redis-py. A Redis outage only ever surfaces at the point something is actually s
 | `cache_method` | Any sync function/method | `PickledEncoder` (pickle) | function args/kwargs, via `KeyBuilder.key_builder` |
 
 ```python
-from fastspine import cache_method_async
+from fastspine.cache.cache_decorater import cache_method_async
 
 class ReviewerService:
     @cache_method_async(expire=timedelta(minutes=10))

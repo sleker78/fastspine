@@ -11,6 +11,16 @@ Celery settings (`CELERY_BROKER_URI`, `CELERY_BACKEND_URI`, `CELERY_TASK_FOLDERS
 documented in [Configuration: Celery settings](configuration.md#celery-settings) - this doc
 covers how they're used, not what each one means.
 
+`celery` is an optional extra (it also pulls in `redis`, which `BaseTask` needs for dedup/caching):
+
+```bash
+pip install "fastspine[celery]"
+```
+
+`fastspine.celery.engine`/`fastspine.celery.base_task` aren't importable without it - but `import
+fastspine` itself doesn't require `celery` at all, so this only matters for the process that
+actually runs tasks (worker, and wherever `.delay()` is called from).
+
 **`BaseTask` assumes sync tasks.** Its session cleanup (`fastspine.dependencies.repository_manager._close_sessions_sync`)
 can only close a sync `Session`; if a task loads an `AsyncSession`-backed `RepositoryManager`, it
 logs an error and leaves that session open rather than crashing (see

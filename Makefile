@@ -7,8 +7,8 @@ uninstall_pre_commit:  ## configure and install pre commit tool
 	uv run pre-commit uninstall
 
 .PHONY: install
-install:  ## Install the project and it's development dependencies
-	uv sync --group dev
+install:  ## Install the project, its development dependencies, and every optional extra
+	uv sync --group dev --all-extras
 
 .PHONY: ruff
 ruff:  ## Run ruff linter

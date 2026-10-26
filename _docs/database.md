@@ -11,6 +11,15 @@ Wiring a database into a FastSpine app has four pieces, each with its own place:
 
 This doc covers all four, plus how a request/service actually ends up with a working session.
 
+**Database drivers are optional extras** - FastSpine itself doesn't require any specific driver
+installed; `DBConfig.service` (below) just tells SQLAlchemy which one to load by name when you
+actually create an engine. Install the one(s) you need:
+
+```bash
+pip install "fastspine[postgres]"   # asyncpg + psycopg2-binary, for POSTGRES/ASYNC_POSTGRES
+pip install "fastspine[mysql]"      # aiomysql + pymysql, for MYSQL/ASYNC_MYSQL
+```
+
 ## 1. Settings: one `DBConfig` per database
 
 Group each database's connection fields on your settings class, and expose a `DBConfig` (or
