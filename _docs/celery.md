@@ -99,9 +99,20 @@ does not enqueue it twice. The key is cleared once the task finishes (success or
 off the result needs to handle that case (e.g. check `isinstance(result, dict)`) if dedup is
 enabled for that task.
 
-This needs a working Redis connection (same one caching uses - see [Caching](caching.md)); if
-`CACHE_ENABLED` is `False` or there's no Redis configured, `get_redis_client()` returns `None` and
-`_cache_task_id` is a no-op - dedup is simply skipped, every call goes through.
+**This dedup logic only runs at all when `CELERY_BROKER_URI` is a Redis broker** (`redis://`/
+`rediss://`, checked via `fastspine.celery.broker.is_redis_broker`). Redis has no built-in message
+deduplication, which is why `BaseTask` implements it at the application level. Other brokers
+(RabbitMQ, ...) typically have their own deduplication module/plugin at the transport level - for
+those, `apply_async` skips this check entirely and forwards straight to Celery's own
+`apply_async`, rather than requiring a working cache-Redis connection for something the broker
+already handles. (This is also why `broker_transport_options`'s `visibility_timeout` - a
+Redis/SQS-only transport option - is only set by `get_celery_instance` for a Redis broker too.)
+
+When the broker *is* Redis, dedup storage itself uses the same cache-layer Redis connection as
+[Caching](caching.md) (`CacheSettings`/`REDIS_HOST`/etc - not `CELERY_BROKER_URI` directly, despite
+both being Redis in this case). If `CACHE_ENABLED` is `False` or that connection isn't reachable,
+`get_redis_client()` returns `None` and `_cache_task_id` is a no-op - dedup is skipped, every call
+goes through.
 
 ### Session cleanup on completion/failure
 

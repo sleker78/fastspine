@@ -7,13 +7,26 @@ from celery.signals import task_failure, task_postrun, task_prerun
 
 from ..ctx.ctx_pool import ctxpool
 from ..dependencies.repository_manager import _close_sessions_sync
-from ..redis.client import get_redis_client
+from ..redis.client import get_sync_redis_client as get_redis_client
 from ..settings import get_core_settings
 from ..util.debug_util import DebugUtil
+from .broker import is_redis_broker
 
 
 class BaseTask(Task):
     """A base task class that can be extended for custom behavior."""
+
+    @staticmethod
+    def _dedup_enabled() -> bool:
+        """Whether Redis-based task deduplication should run.
+
+        Only meaningful when the broker is Redis - Redis itself has no built-in message
+        deduplication, which is why this exists. Other brokers (RabbitMQ, ...) handle
+        deduplication at the transport level via their own module/plugin, so this app-level
+        check is skipped there rather than requiring a working cache-Redis connection for
+        something that broker already does.
+        """
+        return is_redis_broker(get_core_settings().CELERY_BROKER_URI)
 
     @staticmethod
     def generate_unique_task_id(task_name: str, args=None, kwargs=None):
@@ -36,6 +49,9 @@ class BaseTask(Task):
 
     def apply_async(self, args=None, kwargs=None, *other_args, **other_kwargs):
         """Override apply_async to generate a unique task ID before execution."""
+        if not self._dedup_enabled():
+            return super().apply_async(args, kwargs, *other_args, **other_kwargs)
+
         DebugUtil.debug(f"Applying task {self.name} with args: {args}, kwargs: {kwargs}")
         task_key = BaseTask.generate_unique_task_id(self.name, args, kwargs)
 
@@ -72,12 +88,12 @@ class BaseTask(Task):
         """Handle task completion after running."""
         if sender is not None:
             DebugUtil.debug(f"Task {sender.name} completed with task ID: {task_id}")
-            if task_id is not None:
+            if task_id is not None and BaseTask._dedup_enabled():
                 task_key = BaseTask.generate_unique_task_id(sender.name, args, kwargs)
-            redis_client = get_redis_client()
-            if redis_client is not None:
-                DebugUtil.debug(f"Deleting task key {task_key} from Redis.")
-                redis_client.delete(task_key)
+                redis_client = get_redis_client()
+                if redis_client is not None:
+                    DebugUtil.debug(f"Deleting task key {task_key} from Redis.")
+                    redis_client.delete(task_key)
         DebugUtil.debug("Closing repository manager sessions opened during the task.")
         _close_sessions_sync()
         BaseTask._clear_cache()

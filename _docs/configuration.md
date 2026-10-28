@@ -88,13 +88,13 @@ your choice. If you only run one Redis instance for both, set `REDIS_HOST`/`REDI
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `CELERY_BROKER_URI` | `str` | `""` | Celery broker connection URL. Only used by Celery (`fastspine.celery.engine`) - the cache layer connects via `CacheSettings.get_redis_url()`/`REDIS_*` (above) instead, not this field. Must be a `redis://`, `rediss://`, or `unix://` URL (empty string fails to parse). |
+| `CELERY_BROKER_URI` | `str` | `""` | Celery broker connection URL. Only used by Celery (`fastspine.celery.engine`) - the cache layer connects via `CacheSettings.get_redis_url()`/`REDIS_*` (above) instead, not this field. Any broker Celery/Kombu supports works (`redis://`, `rediss://`, `amqp://` for RabbitMQ, ...); whether it's a Redis URL specifically also gates `VISIBILITY_TIMEOUT` and `BaseTask`'s dedup logic below. |
 | `CELERY_BACKEND_URI` | `str` | `"redis://localhost:6385/0"` | Celery result backend URL. |
 | `CELERY_RESULT_EXPIRES` | `int` | `604800` (7 days, in seconds) | How long Celery keeps task results around. |
 | `CELERY_MAIN_NAME` | `str` | `"_redis_main"` | Name of the main Celery app instance. |
 | `CELERY_TASK_FOLDERS` | `list[str]` | `[]` | Module paths Celery should autodiscover tasks from. |
 | `WORKERS_ON` | `bool` | `True` | Whether Celery workers are enabled for this deployment. |
-| `VISIBILITY_TIMEOUT` | `int` | `3600` | Default visibility timeout (seconds) for in-flight tasks. |
+| `VISIBILITY_TIMEOUT` | `int` | `3600` | Default visibility timeout (seconds) for in-flight tasks - only applied when `CELERY_BROKER_URI` is a Redis broker (see [Celery](celery.md#deduplication)); ignored otherwise, since other brokers handle this at the transport level. |
 
 ## Profiler settings
 

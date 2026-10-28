@@ -4,6 +4,7 @@ from celery import Celery
 from pydantic_settings import BaseSettings
 
 from ..settings import CoreSettings, get_core_settings, init_core_settings
+from .broker import is_redis_broker
 
 
 def get_celery_instance(settings: BaseSettings, *kwargs) -> Celery:
@@ -13,7 +14,11 @@ def get_celery_instance(settings: BaseSettings, *kwargs) -> Celery:
     class Config:
         """Celery configuration class."""
 
-        broker_transport_options: ClassVar = {"visibility_timeout": core_settings.VISIBILITY_TIMEOUT}
+        broker_transport_options: ClassVar = (
+            {"visibility_timeout": core_settings.VISIBILITY_TIMEOUT}
+            if is_redis_broker(core_settings.CELERY_BROKER_URI)
+            else {}
+        )
 
     return Celery(
         core_settings.CELERY_MAIN_NAME,

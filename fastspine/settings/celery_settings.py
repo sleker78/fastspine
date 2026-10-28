@@ -8,3 +8,9 @@ class CelerySettings:
     CELERY_TASK_FOLDERS: list[str] = []
     WORKERS_ON: bool = True  # Whether workers are enabled
     VISIBILITY_TIMEOUT: int = 3600  # Default visibility timeout for tasks in seconds
+    CELERY_DEDUPLICATION_ENABLED: bool = True  # Whether task deduplication is enabled
+
+    @property
+    def celery_deduplication_enabled(self) -> bool:
+        """Check if task deduplication is enabled."""
+        return self.CELERY_DEDUPLICATION_ENABLED
