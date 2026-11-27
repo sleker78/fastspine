@@ -180,28 +180,22 @@ never cached, and doesn't need to be - it writes, it doesn't read.
 # myapp/main.py
 import myapp.bootstrap  # noqa: F401  (must run before any route uses OrderService)
 
-from typing import Annotated
-
-from fastapi import Depends
-
-from fastspine import FastSpineApp, service_dep
+from fastspine import FastSpineApp, Service
 
 from myapp.settings import settings
 from myapp.services.order_service import OrderService
 
 app = FastSpineApp(settings=settings, title=settings.PROJECT_NAME)
 
-OrderServiceDep = Annotated[OrderService, Depends(service_dep(OrderService))]
-
 
 @app.post("/orders")
-async def create_order(customer_name: str, total_cents: int, service: OrderServiceDep):
+async def create_order(customer_name: str, total_cents: int, service: Service[OrderService]):
     order_id = await service.create_order(customer_name, total_cents)
     return {"id": order_id}
 
 
 @app.get("/orders/{order_id}")
-async def get_order(order_id: int, service: OrderServiceDep):
+async def get_order(order_id: int, service: Service[OrderService]):
     return await service.get_order(order_id)
 ```
 

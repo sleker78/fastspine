@@ -179,7 +179,7 @@ A `RepositoryManager` instance is what actually holds a session. Call `.get(Repo
 repository bound to that same session, created lazily and cached for reuse:
 
 ```python
-primary = load_repository_manager(PrimaryRepositoryManager)  # or injected via Depends/service_dep
+primary = load_repository_manager(PrimaryRepositoryManager)  # or injected via Service[...]/Depends
 order_repo = primary.get(OrderRepository)  # db/profiler injected automatically
 ```
 
@@ -207,9 +207,9 @@ class OrderSyncService(BaseService):
         self.reporting.get(ReportingRepository).save(orders)
 ```
 
-Inject it into a FastAPI route with `Depends(service_dep(OrderSyncService))`, or build it eagerly
-outside a request (CLI, Celery) with `load_service(OrderSyncService)` - both resolve the same
-constructor dependencies, just at different times. See the
+Inject it into a FastAPI route with `Service[OrderSyncService]` (`from fastspine import Service`),
+or build it eagerly outside a request (CLI, Celery) with `load_service(OrderSyncService)` - both
+resolve the same constructor dependencies, just at different times. See the
 [README](../README.md#6-use-the-service) for the full DI picture, and [CLI](cli.md) /
 `fastspine.celery.base_task.BaseTask` for how sessions opened this way get closed outside a
 FastAPI request.

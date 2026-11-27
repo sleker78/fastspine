@@ -182,21 +182,17 @@ import, not a blanket rule.
 
 ```python
 # myapp/api/orders.py
-from typing import Annotated
+from fastapi import APIRouter
 
-from fastapi import APIRouter, Depends
-
-from fastspine import service_dep
+from fastspine import Service
 
 from myapp.services.sync_service import OrderSyncService
 
 router = APIRouter()
 
-OrderSyncServiceDep = Annotated[OrderSyncService, Depends(service_dep(OrderSyncService))]
-
 
 @router.post("/orders/sync")
-def trigger_sync(service: OrderSyncServiceDep):
+def trigger_sync(service: Service[OrderSyncService]):
     service.trigger_sync()
     return {"status": "queued"}
 ```

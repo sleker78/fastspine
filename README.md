@@ -58,7 +58,9 @@ given integration does (e.g. `fastspine.celery.base_task` needs the `celery` ext
 FastSpine provides two parallel sets of dependency helpers for every layer:
 
 - `*_dep` / `get_*` factories (e.g. `service_dep`, `get_repository`, `get_repository_manager`) —
-  build FastAPI `Depends()`-compatible callables for use inside request handlers.
+  build FastAPI `Depends()`-compatible callables for use inside request handlers. For services,
+  `Service[YourService]` is shorthand for `Annotated[YourService, Depends(service_dep(YourService))]`
+  — use it directly as a route parameter's type, no `Annotated`/`Depends` import needed.
 - `load_*` helpers (e.g. `load_service`, `load_repository`, `load_repository_manager`) — resolve the
   same dependency graph eagerly, for use outside of FastAPI's request lifecycle (CLI commands, Celery
   tasks, scripts).
@@ -260,21 +262,20 @@ class OrderSyncService(BaseService):
 
 ### 6. Use the service
 
-Inside a FastAPI route, inject it with `service_dep`:
+Inside a FastAPI route, inject it with `Service[...]`:
 
 ```python
-from typing import Annotated
-
-from fastapi import Depends
-
-from fastspine import service_dep
-
-OrderSyncServiceDep = Annotated[OrderSyncService, Depends(service_dep(OrderSyncService))]
+from fastspine import Service
 
 @app.post("/orders/sync")
-def sync_orders(service: OrderSyncServiceDep):
+def sync_orders(service: Service[OrderSyncService]):
     service.sync()
 ```
+
+`Service[OrderSyncService]` is shorthand for `Annotated[OrderSyncService,
+Depends(service_dep(OrderSyncService))]` - use that longer form directly (`from fastspine import
+service_dep`) if you want to build the `Annotated` alias yourself, e.g. to reuse it across several
+routes under your own name.
 
 Outside of FastAPI's request lifecycle (CLI commands, Celery tasks), use `load_service` instead,
 which resolves the same dependency graph eagerly:

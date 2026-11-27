@@ -1,7 +1,9 @@
 import inspect
-from typing import Any
+from functools import cache
+from typing import TYPE_CHECKING, Annotated, Any, TypeVar
 
 from fastapi import Depends
+from fastapi.params import Depends as DependsParam
 
 from ..ctx.ctx_pool import ctxpool
 from ..dependencies.repository_manager import get_repository_manager, load_repository_manager
@@ -9,9 +11,27 @@ from ..repositories.repository_manager import RepositoryManager
 from ..services.base_service import BaseService
 from ..util.class_util import get_class_annotations
 
+T = TypeVar("T")
 supported_params_type = [BaseService, RepositoryManager]
 # Track dependency resolution to detect circular dependencies
 _dependency_resolution_stack: set[type] = set()
+
+
+@cache
+def _dependency_for(cls: type) -> DependsParam:
+    return Depends(service_dep(cls))
+
+
+if TYPE_CHECKING:
+    Service = Annotated[T, "fastspine.service"]
+else:
+
+    class Service:
+        """Type hint for service dependencies in FastAPI endpoints."""
+
+        def __class_getitem__(cls, item: type) -> object:
+            """Return a FastAPI dependency for the given service class."""
+            return Annotated[item, _dependency_for(item)]
 
 
 def clear_cache():
