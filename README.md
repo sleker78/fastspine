@@ -348,6 +348,15 @@ import state.
 - [Celery](https://github.com/sleker78/fastspine/blob/main/_docs/celery.md) — `BaseTask` (dedup, session cleanup, failure fallback), and how to
   run the worker in dev vs. prod.
 
+### Using FastSpine with Claude Code / an AI coding agent
+
+[`_docs/SKILL.md`](https://github.com/sleker78/fastspine/blob/main/_docs/SKILL.md) is a condensed,
+gotcha-focused cheat sheet for agents building apps on top of FastSpine - the bootstrap discipline,
+the full list of settings `CoreSettings` requires even for unused features, DI patterns, and an
+error-message → cause → fix table for the most common mistakes. It's a template, not something
+FastSpine auto-installs: copy it into your own project at `.claude/skills/fastspine/SKILL.md` to
+have Claude Code pick it up automatically.
+
 ## Development
 
 Common tasks are available via `make`:

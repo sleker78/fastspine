@@ -1,6 +1,6 @@
 [project]
 name = "FastSpine"
-version = "1.2.0"
+version = "1.3.0"
 description = "Stop copy-pasting FastAPI + SQLAlchemy boilerplate - a repository/service layer, Redis caching, and Celery tasks that work the same way in your API, CLI, and workers."
 authors = [
     {name = "Aleksandar Pavlovic", email = "sleker@gmail.com"}

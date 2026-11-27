@@ -1,9 +1,13 @@
+from typing import Callable
+
 from fastapi import FastAPI
 from pydantic_settings import BaseSettings
 from starlette.middleware.base import BaseHTTPMiddleware
 
+from .dependencies.profiler import set_profiler_factory
 from .exception.base_app_exception import BaseAppError
 from .exception.exception_handler import value_error_handler
+from .lib.profiler import Profiler
 from .settings import CoreSettings, init_core_settings
 
 
@@ -15,13 +19,22 @@ class FastSpineApp(FastAPI):
         *,
         settings: BaseSettings | None = None,
         use_asgi_middleware: bool = False,
+        profiler_factory: Callable[[], Profiler] | None = None,
         **kwargs,
     ):
         """Initialize the FastCoreApp with optional settings and middleware choice.
 
         Accepts every keyword argument `FastAPI.__init__` accepts (`title`, `debug`,
         `lifespan`, ...), forwarded as-is, in addition to `settings` and `use_asgi_middleware`.
+
+        `profiler_factory`, if given, is registered via `set_profiler_factory` - equivalent to
+        calling it yourself before constructing the app, just inline here for the FastAPI process.
+        A CLI command or Celery worker process still needs its own `set_profiler_factory` call,
+        same as `register_sessions`/`init_core_settings` - this only covers the process that
+        actually builds a `FastSpineApp`.
         """
+        if profiler_factory is not None:
+            set_profiler_factory(profiler_factory)
         self.core_settings: CoreSettings = init_core_settings(settings=settings)
         kwargs.setdefault("title", self.core_settings.PROJECT_NAME)
         super().__init__(**kwargs)
@@ -45,15 +58,22 @@ class FastSpineApp(FastAPI):
                     )
 
 
-def run_fast_core_app(settings: BaseSettings | None = None, use_asgi_middleware: bool = False) -> FastAPI:
+def run_fast_core_app(
+    settings: BaseSettings | None = None,
+    use_asgi_middleware: bool = False,
+    profiler_factory: Callable[[], Profiler] | None = None,
+) -> FastAPI:
     """Initialize the FastAPI core application.
 
     Args:
         settings (BaseSettings): The settings instance containing configuration.
         use_asgi_middleware (bool): Whether to use ASGI middleware for streaming responses.
+        profiler_factory: Registered via `set_profiler_factory` if given - see `FastSpineApp`.
 
     This function sets up the core settings, middleware, and routes for the FastAPI application.
     """
+    if profiler_factory is not None:
+        set_profiler_factory(profiler_factory)
     core_settings: CoreSettings = init_core_settings(settings=settings)
     app = FastAPI(title=core_settings.PROJECT_NAME)
     app.add_exception_handler(BaseAppError, value_error_handler)

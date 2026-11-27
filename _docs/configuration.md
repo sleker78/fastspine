@@ -108,6 +108,57 @@ Control `fastspine.lib.profiler.Profiler`, as constructed by `load_profiler()`/`
 | `PROFILER_LOG_LEVEL` | `int` | `logging.INFO` | Logging level the profiler's `log()` calls use by default. |
 | `PROFILER_TRACK_MEMORY` | `bool \| None` | `False` | Whether the profiler also records process memory usage (via `psutil`) alongside timing. |
 
+By default, `load_profiler()`/`fetch_profiler()` build one `Profiler` from the four settings above
+the first time anything asks for it in a given context (request/task/command), then reuse that
+same instance for the rest of it - they don't construct a new `Profiler` on every call.
+
+### Using your own `Profiler`
+
+If you need different behavior than the four settings above give you (e.g. shipping metrics
+somewhere instead of just logging them), subclass `Profiler` and register a factory for it with
+`set_profiler_factory`:
+
+```python
+from fastspine import Profiler, set_profiler_factory
+
+
+class MetricsProfiler(Profiler):
+    def log(self, level, message, *args, checkpoint_name=None, **kwds):
+        super().log(level, message, *args, checkpoint_name=checkpoint_name, **kwds)
+        # e.g. ship `checkpoint_name`/timing to your metrics backend here
+
+
+set_profiler_factory(lambda: MetricsProfiler(name="my-app", enabled=True))
+```
+
+Call `set_profiler_factory` once, at process startup - the same process-per-entrypoint discipline
+as `register_sessions`/`init_core_settings` (see
+[Database: registration](database.md#3-registration-register_sessions-in-its-own-module)): a
+FastAPI app, a CLI command, and a Celery worker are each their own process, so each needs this
+call if you want the custom profiler everywhere, not just wherever you happened to call it first.
+A natural place is the same bootstrap module that already calls `register_sessions`.
+
+For the FastAPI process specifically, `FastSpineApp`/`run_fast_core_app` accept a `profiler_factory`
+kwarg that does this call for you, inline with the rest of app construction:
+
+```python
+app = FastSpineApp(settings=settings, title=settings.PROJECT_NAME, profiler_factory=lambda: MetricsProfiler(name="my-app", enabled=True))
+```
+
+This only covers the FastAPI process, though - a CLI command or Celery worker still needs its own
+explicit `set_profiler_factory(...)` call (same reasoning as above), since `FastSpineApp` is never
+constructed there at all.
+
+The factory takes no arguments - call `get_core_settings()` yourself inside it if your subclass
+still wants the standard settings-driven behavior (as in the lambda above, which skips that and
+hardcodes `enabled=True` instead). **The returned object must actually be a `Profiler` instance**
+(an instance of a subclass, not an unrelated duck-typed object) - every place a profiler gets
+injected (`BaseService.profiler`, `BaseRepository.profiler`, the cache decorators' `log_cache_*`
+options) is typed as plain `Profiler`, not your subclass, and FastSpine's own DI
+(`fastspine.repositories.repository_manager`) matches on `param_type is Profiler` to decide when
+to inject one at all - so extend `Profiler`'s methods, don't replace its shape. Pass `None` to
+`set_profiler_factory` to go back to the default.
+
 ## Mailer settings
 
 Passed straight through to `fastapi-mail`'s `ConnectionConfig` by `fastspine.mailer`. See
