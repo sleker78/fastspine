@@ -1,8 +1,9 @@
 # FastSpine
 
-FastSpine is a Python framework built on top of FastAPI that provides a service-repository
-architecture, dependency injection, caching, and supporting infrastructure (database sessions, Celery
-tasks, Alembic migrations, Redis, mailer) for building backend applications.
+Stop copy-pasting the same FastAPI + SQLAlchemy boilerplate into every project. FastSpine gives
+you a repository/service layer, Redis caching, and Celery tasks that are wired up the same way
+everywhere - in your API, your CLI, and your background workers - so you write the business logic
+once and reuse it across all three.
 
 ## Requirements
 
